@@ -43,38 +43,42 @@ def readFile(file_name, current_data):
     return [words, current_data[1] + total_no_of_words]
 
 
-def getBayseinProbabilityTable(x_word_freq_in_files_and_total_words, x_all_emails_list):
-    no_of_words_in_spam_emails = x_word_freq_in_files_and_total_words["spam"][1]
-    no_of_words_in_not_spam_emails = x_word_freq_in_files_and_total_words["notspam"][1]
-    total_words = no_of_words_in_spam_emails + no_of_words_in_not_spam_emails
-    probability_of_word_in_spam_at0_not_spam_at1 = {}               # {word: [probability in spam, probability in not spam]}
-    for word in x_word_freq_in_files_and_total_words["spam"][0]:
-        probability_of_word_in_spam_at0_not_spam_at1[word] = [(1.0*x_word_freq_in_files_and_total_words["spam"][0][word])/(1.0*no_of_words_in_spam_emails), 0.0000001]
+def getProbabilityDistribution(words, email_list):
+    spam_count = words["spam"][1]
+    not_spam_count = words["notspam"][1]
+    total_words = spam_count + not_spam_count
+    probability_of_spam_words = {}
+    for word in words["spam"][0]:
+        probability_of_spam_words[word] = (1.0*words["spam"][0][word])/(spam_count)
 
-    for word in x_word_freq_in_files_and_total_words["notspam"][0]:
-        if probability_of_word_in_spam_at0_not_spam_at1.has_key(word):
-            probability_of_word_in_spam_at0_not_spam_at1[word] = [probability_of_word_in_spam_at0_not_spam_at1[word][0],
-                                                                  (1.0 * x_word_freq_in_files_and_total_words["notspam"]
-                                                                  [0][word]) / (1.0 * no_of_words_in_spam_emails)]
+    probability_of_notspam_words = {}
+    for word in words["notspam"][0]:
+    	probability_of_notspam_words[word] = (1.0*words["notspam"][0][word]/not_spam_count)
+    
 
-        else:
-            probability_of_word_in_spam_at0_not_spam_at1[word] = [0.0000001,
-                                                                  (1.0 *
-                                                                   x_word_freq_in_files_and_total_words["notspam"][0][
-                                                                       word]) / (1.0 * no_of_words_in_spam_emails)]
+    return [probability_of_spam_words, probability_of_notspam_words]
 
-    return probability_of_word_in_spam_at0_not_spam_at1
-
+def writeProbabilityInFile(spam, notspam, filePath):
+	file = open(filePath, 'w')
+	for word in spam:
+		file.write('%s,%s'%(word, spam[word]))
+		file.write(' ')
+	file.write('\n')
+	for word in notspam:
+		file.write('%s,%s'%(word, notspam[word]))
+		file.write(' ')
+	file.close()
 
 start_time = time.time()
 print time.asctime(time.localtime(time.time()))
 
 (mode, technique, dataset, modelfile) = sys.argv[1:]
 
-all_emails_list = getFileList(dataset)
-word_freq_in_files_and_total_words = getFileData(all_emails_list, dataset)
-probability_of_word_in_spam_at0_not_spam_at1 = getBayseinProbabilityTable(word_freq_in_files_and_total_words, all_emails_list)
-print probability_of_word_in_spam_at0_not_spam_at1["money"]
+if mode == "train":
+	email_directories = getFileList(dataset)
+	word_set = getFileData(email_directories, dataset)
+	[spam_probability, notspam_probability] = getProbabilityDistribution(word_set, email_directories)
+	writeProbabilityInFile(spam_probability, notspam_probability, modelfile);
 
 end_time = time.time()
 print time.asctime(time.localtime(time.time()))
