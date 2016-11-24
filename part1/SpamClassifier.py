@@ -2,6 +2,7 @@ import sys
 import time
 import os
 import re
+import pickle
 
 
 class FilesData:
@@ -36,6 +37,7 @@ class FilesData:
     # List of words
     words = {}
 
+class ProbailityTable:
     # Probability Table  {word: [p being spam considering freq, p being not spam considering freq, p being spam
     # considering how many spam files have this word, p being not spam considering how many spam files have this word]}
     probability_table = {}
@@ -126,19 +128,18 @@ def getProbabilityDistribution_old(words):
 def getProbabilityDistribution(p_if_not_present_f, p_if_not_present_01):
 
     for word in fd.words:
-        fd.probability_table[word] = [p_if_not_present_f, p_if_not_present_f, p_if_not_present_01, p_if_not_present_01]
+        pt.probability_table[word] = [p_if_not_present_f, p_if_not_present_f, p_if_not_present_01, p_if_not_present_01]
         if word in fd.no_of_files_with_this_word_in_spam:
-            fd.probability_table[word][0] = (1.0 * fd.spam_words_f[word]) / fd.total_words_spam_files
-            fd.probability_table[word][2] = (1.0 * fd.no_of_files_with_this_word_in_spam[word]) / fd.spam_files_count
+            pt.probability_table[word][0] = (1.0 * fd.spam_words_f[word]) / fd.total_words_spam_files
+            pt.probability_table[word][2] = (1.0 * fd.no_of_files_with_this_word_in_spam[word]) / fd.spam_files_count
 
         if word in fd.no_of_files_with_this_word_in_n_spam:
-            fd.probability_table[word][1] = (1.0 * fd.n_spam_words_f[word]) / fd.total_words_n_spam_files
-            fd.probability_table[word][3] = (1.0 * fd.no_of_files_with_this_word_in_n_spam[word]) / fd.n_spam_files_count
-
+            pt.probability_table[word][1] = (1.0 * fd.n_spam_words_f[word]) / fd.total_words_n_spam_files
+            pt.probability_table[word][3] = (1.0 * fd.no_of_files_with_this_word_in_n_spam[word]) / fd.n_spam_files_count
     return 0
 
 
-def writeProbabilityInFile(filePath, probabilityIfNotPresent):
+def writeProbabilityInFile_old(filePath):
     file = open(filePath, 'w')
     for word in fd.p_spam_words_f:
         file.write('%s,%s' % (word, fd.p_spam_words_f[word]))
@@ -150,16 +151,25 @@ def writeProbabilityInFile(filePath, probabilityIfNotPresent):
     file.close()
 
 
-def writeProbabilityInFile2(filePath, probabilityIfNotPresent):
-    file = open(filePath, 'w')
-    for word in fd.p_spam_words_f:
-        file.write('%s,%s' % (word, fd.p_spam_words_f[word]))
-        file.write(' ')
-    file.write('\n')
-    for word in fd.p_n_spam_words_f:
-        file.write('%s,%s' % (word, fd.p_n_spam_words_f[word]))
-        file.write(' ')
-    file.close()
+def writeModel(filePath):
+    output_file = open(filePath, 'w')
+    for word in pt.probability_table:
+        output_file.write('%s %s ' % (word, pt.probability_table[word][0]))
+        output_file.write('%s %s ' % (pt.probability_table[word][1], pt.probability_table[word][2]))
+        output_file.write('%s\n' % (pt.probability_table[word][3]))
+    output_file.close()
+
+
+def readModel(filePath):
+    input_file = open(filePath, 'r')
+    for line in input_file:
+        words = line.split()
+        pt.probability_table[words[0]] = [float(words[1]), float(words[2]), float(words[3]), float(words[4])]
+    input_file.close()
+    for word in pt.probability_table:
+        print word + " " + str(pt.probability_table[word])
+
+
 
 
 start_time = time.time()
@@ -168,13 +178,20 @@ print time.asctime(time.localtime(time.time()))
 (mode, technique, dataset, modelfile) = sys.argv[1:]
 
 fd = FilesData()
+pt = ProbailityTable()
 
 if mode == "train":
     email_directories = getFileList(dataset)
     word_set = getFileData(email_directories, dataset)
     # getProbabilityDistribution_old(word_set)
     getProbabilityDistribution(0.0001, 0.0002)
-    writeProbabilityInFile(modelfile, 0.00001)
+    writeModel(modelfile)
+
+
+if mode == "test":
+    readModel(modelfile)
+
+
 
 end_time = time.time()
 print time.asctime(time.localtime(time.time()))
