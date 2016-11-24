@@ -34,7 +34,7 @@ class FilesData:
     n_spam_files = []
 
     # List of words
-    words = []
+    words = {}
 
     # Probability Table  {word: [p being spam considering freq, p being not spam considering freq, p being spam
     # considering how many spam files have this word, p being not spam considering how many spam files have this word]}
@@ -53,7 +53,7 @@ def getFileData(x_all_emails_list, x_dataset):
 
     fd.spam_files_count = len(x_all_emails_list["spam"])
     fd.n_spam_files_count = len(x_all_emails_list["notspam"])
-
+    i = 0
     for file_name in x_all_emails_list["spam"]:
         spam_files = readFile(x_dataset + "/spam/" + file_name, spam_files, "spam")
 
@@ -84,7 +84,7 @@ def readFile(file_name, current_data, filetype):
             total_no_of_words += 1
 
             if not (word in fd.words):
-                fd.words.append(word)
+                fd.words[word] = 1
 
             if word in words:
                 words[word] += 1
@@ -105,6 +105,7 @@ def readFile(file_name, current_data, filetype):
                     else:
                         fd.no_of_files_with_this_word_in_n_spam[word] = 1
                 words_in_this_file[word] = 1
+
     if filetype == "spam":
         fd.spam_files.append(words_in_this_file)
     else:
@@ -112,7 +113,7 @@ def readFile(file_name, current_data, filetype):
     return [words, current_data[1] + total_no_of_words]
 
 
-def getProbabilityDistribution(words):
+def getProbabilityDistribution_old(words):
     for word in words["spam"][0]:
         fd.p_spam_words_f[word] = (1.0 * fd.spam_words_f[word]) / fd.total_words_spam_files
 
@@ -122,7 +123,7 @@ def getProbabilityDistribution(words):
     return [fd.p_spam_words_f, fd.p_n_spam_words_f]
 
 
-def getProbabilityDistribution2(p_if_not_present_f, p_if_not_present_01):
+def getProbabilityDistribution(p_if_not_present_f, p_if_not_present_01):
 
     for word in fd.words:
         fd.probability_table[word] = [p_if_not_present_f, p_if_not_present_f, p_if_not_present_01, p_if_not_present_01]
@@ -133,9 +134,6 @@ def getProbabilityDistribution2(p_if_not_present_f, p_if_not_present_01):
         if word in fd.no_of_files_with_this_word_in_n_spam:
             fd.probability_table[word][1] = (1.0 * fd.n_spam_words_f[word]) / fd.total_words_n_spam_files
             fd.probability_table[word][3] = (1.0 * fd.no_of_files_with_this_word_in_n_spam[word]) / fd.n_spam_files_count
-
-    for word in fd.probability_table:
-        print str(word) + " " + str(fd.probability_table[word])
 
     return 0
 
@@ -174,8 +172,8 @@ fd = FilesData()
 if mode == "train":
     email_directories = getFileList(dataset)
     word_set = getFileData(email_directories, dataset)
-    getProbabilityDistribution(word_set)
-    getProbabilityDistribution2(0.0001, 0.0002)
+    # getProbabilityDistribution_old(word_set)
+    getProbabilityDistribution(0.0001, 0.0002)
     writeProbabilityInFile(modelfile, 0.00001)
 
 end_time = time.time()
