@@ -134,7 +134,8 @@ def getProbabilityDistribution2(p_if_not_present_f, p_if_not_present_01):
             fd.probability_table[word][1] = (1.0 * fd.n_spam_words_f[word]) / fd.total_words_n_spam_files
             fd.probability_table[word][3] = (1.0 * fd.no_of_files_with_this_word_in_n_spam[word]) / fd.n_spam_files_count
 
-    print fd.probability_table
+    for word in fd.probability_table:
+        print str(word) + " " + str(fd.probability_table[word])
 
     return 0
 
