@@ -125,8 +125,9 @@ def getProbabilityDistribution_old(words):
     return [fd.p_spam_words_f, fd.p_n_spam_words_f]
 
 
-def getProbabilityDistribution(p_if_not_present_f, p_if_not_present_01):
-
+def getProbabilityDistribution():
+    p_if_not_present_f = 1.0/fd.total_words_spam_files
+    p_if_not_present_01 = 1.0/fd.spam_files_count
     for word in fd.words:
         pt.probability_table[word] = [p_if_not_present_f, p_if_not_present_f, p_if_not_present_01, p_if_not_present_01]
         if word in fd.no_of_files_with_this_word_in_spam:
@@ -166,9 +167,29 @@ def readModel(filePath):
         words = line.split()
         pt.probability_table[words[0]] = [float(words[1]), float(words[2]), float(words[3]), float(words[4])]
     input_file.close()
-    for word in pt.probability_table:
-        print word + " " + str(pt.probability_table[word])
 
+
+def findPGivenWords(x_files):
+    result = [0, 0, 0, 0]
+    for mail in x_files:
+        probability_01 = 1.0
+        probability_f = 1.0
+        for word in mail:
+            if word in pt.probability_table:
+                probability_f *= pt.probability_table[word][0]/pt.probability_table[word][1]
+                probability_01 *= pt.probability_table[word][2] / pt.probability_table[word][3]
+
+        if probability_f > 1.0:
+            result[0] += 1
+        else:
+            result[1] += 1
+
+        if probability_01 > 1.0:
+            result[2] += 1
+        else:
+            result[3] += 1
+
+    print result
 
 
 
@@ -182,15 +203,18 @@ pt = ProbailityTable()
 
 if mode == "train":
     email_directories = getFileList(dataset)
-    word_set = getFileData(email_directories, dataset)
+    getFileData(email_directories, dataset)
     # getProbabilityDistribution_old(word_set)
-    getProbabilityDistribution(0.0001, 0.0002)
+    getProbabilityDistribution()
     writeModel(modelfile)
 
 
 if mode == "test":
     readModel(modelfile)
-
+    email_directories = getFileList(dataset)
+    getFileData(email_directories, dataset)
+    findPGivenWords(fd.spam_files)
+    findPGivenWords(fd.n_spam_files)
 
 
 end_time = time.time()
