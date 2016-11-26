@@ -2,7 +2,6 @@ import sys
 import time
 import os
 import re
-import pickle
 
 
 class FilesData:
@@ -10,7 +9,7 @@ class FilesData:
     spam_words_f = {}
     n_spam_words_f = {}
 
-    # Variables to store number probability of a word apperaing in spam/non spam files considering freq. of word
+    # Variables to store number probability of a word appearing in spam/non spam files considering freq. of word
     p_spam_words_f = {}
     p_n_spam_words_f = {}
 
@@ -18,7 +17,7 @@ class FilesData:
     no_of_files_with_this_word_in_spam = {}
     no_of_files_with_this_word_in_n_spam = {}
 
-    # Variable that store probability of word apperaing in a document
+    # Variable that store probability of word appearing in a document
     p_spam_words_01 = {}
     p_n_spam_words_01 = {}
 
@@ -36,6 +35,9 @@ class FilesData:
 
     # List of words
     words = {}
+
+    # Actual word for the word
+    word_list_with_actual_word = {}
 
 class ProbailityTable:
     # Probability Table  {word: [p being spam considering freq, p being not spam considering freq, p being spam
@@ -70,7 +72,8 @@ def getFileData(x_all_emails_list, x_dataset):
 
     return {"spam": spam_files, "notspam": not_spam_files}
 
-
+# Regex for amount Reference: http://stackoverflow.com/questions/2150205/can-somebody-explain-a-money-regex-that-just-checks-if-the-value-matches-some-pa
+# Regex for email http://stackoverflow.com/questions/8022530/python-check-for-valid-email-address
 def readFile(file_name, current_data, filetype):
     words_in_this_file = {}
     words = current_data[0]
@@ -79,15 +82,26 @@ def readFile(file_name, current_data, filetype):
 
     for line in file_data:
         for word in line.split():
-            if str(re.search('[a-zA-Z]', word)) == "None":
+            actual_word = word
+
+            if word.find("$") <> -1:
+                word = "dollar"
+
+            if not word.isalpha() and word.find("@") == -1 and word.find(".com") == -1 and word.find(".net") == -1:
                 continue
-            word = re.sub('[^a-zA-Z0-9@]', '', word)
+
+            word = re.sub('[^a-zA-Z0-9]', '', word)
+
+            if word == '':
+                continue
+
             word = word.lower()
+
             total_no_of_words += 1
 
             if not (word in fd.words):
                 fd.words[word] = 1
-
+                fd.word_list_with_actual_word[word] = actual_word
             if word in words:
                 words[word] += 1
             else:
@@ -189,12 +203,38 @@ def findPGivenWords(x_files):
         else:
             result[3] += 1
 
-    print result
+    return result
 
 
+def findMostProbableWords(x, y):
+    words = [""]*20
+    probability = [0.0]*20
+    for word in pt.probability_table:
+        p_of_word = pt.probability_table[word][x]/pt.probability_table[word][y]
+        min_index = 0
+        min_probability = 10 ** 100
+        for i in range(len(probability)):
+            if probability[i] < min_probability:
+                min_probability = probability[i]
+                min_index = i
+        if p_of_word > min_probability:
+            words[min_index] = word
+            probability[min_index] = p_of_word
+    return words
 
+
+def printfMostProbableWords(words):
+    result = []
+    for word in words:
+        result.append(fd.word_list_with_actual_word[word])
+    return result
+
+###################################
 start_time = time.time()
 print time.asctime(time.localtime(time.time()))
+print ""
+###################################
+
 
 (mode, technique, dataset, modelfile) = sys.argv[1:]
 
@@ -204,19 +244,38 @@ pt = ProbailityTable()
 if mode == "train":
     email_directories = getFileList(dataset)
     getFileData(email_directories, dataset)
-    # getProbabilityDistribution_old(word_set)
     getProbabilityDistribution()
     writeModel(modelfile)
+
+    print ""
+    words = findMostProbableWords(0, 1)
+    print "P(S=1|w) considering f:" + str(printfMostProbableWords(words))
+    words = findMostProbableWords(2, 3)
+    print "P(S=1|w) considering presense of word in spam:" + str(printfMostProbableWords(words))
+    words = findMostProbableWords(1, 0)
+    print "P(S=0|w) considering f:" + str(printfMostProbableWords(words))
+    words = findMostProbableWords(3, 2)
+    print "P(S=0|w) considering presense of word in spam:" + str(printfMostProbableWords(words))
 
 
 if mode == "test":
     readModel(modelfile)
     email_directories = getFileList(dataset)
     getFileData(email_directories, dataset)
-    findPGivenWords(fd.spam_files)
-    findPGivenWords(fd.n_spam_files)
+    result1 = findPGivenWords(fd.spam_files)
+    result2 = findPGivenWords(fd.n_spam_files)
+    print "ConfusionMatrix where index 0 = Spam and index 1 = Not Spam, row i column j show the number "
+    print "of test exemplars whose correct label is i, but that were classified as j"
+
+    confusionMatrix_f = [[result1[0], result1[1]],[result2[0], result2[1]]]
+    confusionMatrix_01 = [[result1[2], result1[3]], [result2[2], result2[3]]]
+
+    print "Considering f: " + str(confusionMatrix_f)
+    print "Considering presence of word: " + str(confusionMatrix_01)
 
 
+#######################
 end_time = time.time()
+print ""
 print time.asctime(time.localtime(time.time()))
 print end_time - start_time
