@@ -50,6 +50,8 @@ if __name__ == "__main__":
         for topic in topics:
             docCountInTopic[topic] = 0
         p_w_t = {}
+        words_in_topic = {}
+        count_wordDoc_per_topic = {}
         for topic in topics:
             documents = os.listdir(dataset_directory + "/" + topic)
             for word in documents[:]:
@@ -67,6 +69,11 @@ if __name__ == "__main__":
                     docCountInTopic[topic] += 1
 
                 words = re.sub('[^a-zA-Z \n]', '', content).lower().split()
+
+                if topic in words_in_topic:
+                	words_in_topic[topic] += len(words)
+                else:
+                	words_in_topic[topic] = len(words)
                 for word in words:
                     if word in p_w_t:
                         if topic in p_w_t[word]:
@@ -75,10 +82,38 @@ if __name__ == "__main__":
                             p_w_t[word][topic] = 1
                     else:
                         p_w_t[word] = {topic: 1}
-
+                wordSet = set(words)
+                for word in wordSet:
+                	if word in count_wordDoc_per_topic:
+                		if topic in count_wordDoc_per_topic[word]:
+                			count_wordDoc_per_topic[word][topic] += 1
+                		else:
+                			count_wordDoc_per_topic[word][topic] = 1
+                	else:
+                		count_wordDoc_per_topic[word] = {topic: 1}
         for word in p_w_t:
             for topic in p_w_t[word].keys():
-                p_w_t[word][topic] = p_w_t[word][topic] * 1.0 / docCountInTopic[topic]
+                p_w_t[word][topic] = p_w_t[word][topic] * 1.0 / (docCountInTopic[topic] if docCountInTopic[topic] != 0 else 1)
+
+        p_word_in_topic = {}
+        for word in p_w_t.keys():
+        	p_word_in_topic[word] = {}
+        	for topic in p_w_t[word].keys():
+        		p_word_in_topic[word][topic] = (p_w_t[word][topic] * 1.0)/words_in_topic[topic]
+
+        p_count_wordDoc_per_topic = {}
+        for word in count_wordDoc_per_topic.keys():
+        	p_count_wordDoc_per_topic[word] = {}
+        	for topic in count_wordDoc_per_topic[word].keys():
+        		p_count_wordDoc_per_topic[word][topic] = (count_wordDoc_per_topic[word][topic] * 1.0) / (docCountInTopic[topic] if docCountInTopic[topic] != 0 else 1)
+
+        with open(model_file, "w+") as f:
+        	json.dump(p_w_t, f)
+        	f.write("\n")
+        	json.dump(p_word_in_topic, f)
+        	f.write("\n")
+        	json.dump(p_count_wordDoc_per_topic, f)
+        f.close()
         x = 0
     else:  # test mode
         pass
