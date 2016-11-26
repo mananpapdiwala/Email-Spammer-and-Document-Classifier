@@ -42,11 +42,13 @@ if __name__ == "__main__":
 
     if mode == 'train':
         bias = fraction * 100
+        docCountInTopic = {}
         topics = os.listdir(dataset_directory)  # list of all topics
         for word in topics[:]:
             if word.startswith('.'):
                 topics.remove(word)
-
+        for topic in topics:
+            docCountInTopic[topic] = 0
         p_w_t = {}
         for topic in topics:
             documents = os.listdir(dataset_directory + "/" + topic)
@@ -61,6 +63,8 @@ if __name__ == "__main__":
                 flip = randint(0, 100)
                 if flip > bias:  # topic  = unknown if flip > bias
                     filename_with_path = (dataset_directory + "/" + "unknown" + "/" + document)
+                else:
+                    docCountInTopic[topic] += 1
 
                 words = re.sub('[^a-zA-Z \n]', '', content).lower().split()
                 for word in words:
@@ -71,6 +75,10 @@ if __name__ == "__main__":
                             p_w_t[word][topic] = 1
                     else:
                         p_w_t[word] = {topic: 1}
+
+        for word in p_w_t:
+            for topic in p_w_t[word].keys():
+                p_w_t[word][topic] = p_w_t[word][topic] * 1.0 / docCountInTopic[topic]
         x = 0
     else:  # test mode
         pass
