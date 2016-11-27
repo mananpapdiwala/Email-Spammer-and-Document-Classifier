@@ -3,6 +3,7 @@
 import json
 import os
 import sys
+import math
 from random import randint
 
 import re
@@ -60,15 +61,25 @@ STOPWORDS = {'all', 'pointing', 'whoever', 'four', 'go', 'mill', 'oldest', 'seem
              'ourselves', 'grouped', 'other', 'latterly', 'wheres', 'you', 'really', 'felt', 'problems', 'important',
              'sides', 'began', 'younger', 'e', 'longer', 'came', 'backed', 'together', 'u', 'presenting', 'serious'}
 
-def testData(words, probabilityTable, p_T):
+def testData(words, probabilityTable, p_T, defaultDict):
     probability = 1
     p = {}
-    words = set(words).intersection(probabilityTable.keys())
+    #words = set(words).intersection(probabilityTable.keys())
+    words = set(words)
+    words = [word for word in words if word not in STOPWORDS]
     for topic in p_T:
-        p[topic] = p_T[topic]
+        #p[topic] = math.log10(p_T[topic])
+        p[topic] = 0
         for word in words:
-            if topic in probabilityTable[word]:
-                p[topic] *= probabilityTable[word][topic]
+			if word in probabilityTable:	
+				if topic in probabilityTable[word]:
+					p[topic] += math.log10(probabilityTable[word][topic])
+				else:
+					#p[topic] += math.log10(1.0/defaultDict[topic])
+					p[topic] += -6
+			else:
+				#p[topic] += math.log10(1.0/defaultDict[topic])
+				p[topic] += -6
     return max(p.iterkeys(), key=(lambda k: p[k]))
 
 if __name__ == "__main__":
@@ -137,7 +148,7 @@ if __name__ == "__main__":
                     docCountInTopic[topic] += 1
 
                 words = re.sub('[^a-zA-Z \n]', '', content).lower().split()
-                words = [word for word in words if word not in STOPWORDS]
+                #words = [word for word in words if word not in STOPWORDS]
                 if topic in words_in_topic:
                     words_in_topic[topic] += len(words)
                 else:
@@ -160,16 +171,17 @@ if __name__ == "__main__":
                     else:
                         count_wordDoc_per_topic[word] = {topic: 1}
                 totalDocCount += 1
-        for word in p_w_t:
-            for topic in p_w_t[word].keys():
-                p_w_t[word][topic] = p_w_t[word][topic] * 1.0 / (
-                    docCountInTopic[topic] if docCountInTopic[topic] != 0 else 1)
 
         p_word_in_topic = {}
         for word in p_w_t.keys():
             p_word_in_topic[word] = {}
             for topic in p_w_t[word].keys():
                 p_word_in_topic[word][topic] = (p_w_t[word][topic] * 1.0) / words_in_topic[topic]
+
+        for word in p_w_t:
+            for topic in p_w_t[word].keys():
+                p_w_t[word][topic] = p_w_t[word][topic] * 1.0 / (
+                    docCountInTopic[topic] if docCountInTopic[topic] != 0 else 1)
 
         p_count_wordDoc_per_topic = {}
         for word in count_wordDoc_per_topic.keys():
@@ -187,18 +199,26 @@ if __name__ == "__main__":
             'p_w_t': p_w_t,
             'p_word_in_topic': p_word_in_topic,
             'p_count_wordDoc_per_topic': p_count_wordDoc_per_topic,
-            'p_T': p_T
+            'p_T': p_T,
+            'docCountInTopic' : docCountInTopic,
+            'words_in_topic' : words_in_topic
             }
         with open(model_file, "w+") as f:
             json.dump(writeData, f, indent=2)
+        f.close()
     else:  # test mode
         # read the learned model
+        count_doc = 0
+        count_accuracy_p2 = 0
+        count_accuracy_p3 = 0
         with open(model_file) as f:
             readData = json.load(f)
         p_T = readData['p_T']
         p_word_in_topic = readData['p_word_in_topic']
         p_count_wordDoc_per_topic = readData['p_count_wordDoc_per_topic']
         p_w_t = readData['p_w_t']
+        docCountInTopic = readData['docCountInTopic']
+        words_in_topic = readData['words_in_topic']
 
         topics = os.listdir(dataset_directory)  # list of all topics
         for word in topics[:]:
@@ -214,7 +234,12 @@ if __name__ == "__main__":
                 with open(filename_with_path) as f:
                     content = f.read()
                 words = re.sub('[^a-zA-Z \n]', '', content).lower().split()
-                p1 = testData(words, p_w_t, p_T)
-                p2 = testData(words, p_count_wordDoc_per_topic, p_T)
-                p3 = testData(words, p_word_in_topic, p_T)
-                print topic, p1, p2, p3
+                #p1 = testData(words, p_w_t, p_T, {})
+                p2 = testData(words, p_count_wordDoc_per_topic, p_T, docCountInTopic)
+                p3 = testData(words, p_word_in_topic, p_T, words_in_topic)
+                count_doc += 1
+                if topic == p2: count_accuracy_p2 += 1
+                if topic == p3: count_accuracy_p3 += 1
+        f.close()
+        print "Accuracy for p2: ", (count_accuracy_p2*1.0/count_doc)*100
+        print "Accuracy for p3: ", (count_accuracy_p3*1.0/count_doc)*100
