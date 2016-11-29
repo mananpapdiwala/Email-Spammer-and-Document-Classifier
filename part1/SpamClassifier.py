@@ -1,8 +1,62 @@
+import pickle
 import sys
 import time
 import os
 import re
 import math
+
+
+STOPWORDS = {'all', 'pointing', 'whoever', 'four', 'go', 'mill', 'oldest', 'seemed', 'whose', 'certainly', 'young', 'p',
+             'presents', 'to', 'asking', 'those', 'under', 'far', 'every', 'yourselves', 'presented', 'did', 'turns',
+             'large', 'small', 'havent', 'thereupon', 'parted', 'smaller', 'says', 'ten', 'yourself', 'whens', 'here',
+             'second', 'further', 'even', 'what', 'heres', 'wouldnt', 'anywhere', 'above', 'new', 'ever', 'thin', 'men',
+             'full', 'mustnt', 'youd', 'sincere', 'youngest', 'let', 'groups', 'others', 'alone', 'having', 'almost',
+             'along', 'fifteen', 'great', 'didnt', 'k', 'wherever', 'amount', 'arent', 'thats', 'via', 'besides', 'put',
+             'everybody', 'from', 'working', 'two', 'next', 'call', 'therefore', 'taken', 'themselves', 'use', 'evenly',
+             'thru', 'until', 'today', 'more', 'knows', 'clearly', 'becomes', 'hereby', 'herein', 'downing', 'hereupon',
+             'everywhere', 'known', 'cases', 'must', 'me', 'states', 'none', 'room', 'f', 'this', 'work', 'itself', 'l',
+             'nine', 'can', 'mr', 'making', 'my', 'numbers', 'give', 'high', 'weve', 'something', 'want', 'needs', 'eg',
+             'end', 'turn', 'rather', 'meanwhile', 'how', 'itse', 'shouldnt', 'y', 'may', 'after', 'them', 'whenever',
+             'such', 'man', 'a', 'third', 'q', 'so', 'keeps', 'order', 'six', 'furthering', 'indeed', 'over', 'move',
+             'years', 'ended', 'isnt', 'through', 'fify', 'hell', 'still', 'its', 'before', 'beside', 'group', 'thence',
+             'somewhere', 'interesting', 'better', 'differently', 'ours', 'might', 'then', 'non', 'good', 'somebody',
+             'greater', 'thereby', 'eleven', 'downs', 'they', 'not', 'now', 'nor', 'wont', 'gets', 'hereafter',
+             'always', 'whither', 'doesnt', 'each', 'found', 'went', 'side', 'everyone', 'doing',
+             'year', 'our', 'beyond', 'out', 'opened', 'since', 'forty', 're', 'got', 'myse', 'shows', 'turning',
+             'differ', 'quite', 'whereupon', 'members', 'ask', 'anyhow', 'wanted', 'g', 'could', 'needing', 'keep',
+             'thing', 'place', 'w', 'ltd', 'hence', 'onto', 'think', 'first', 'already', 'seeming', 'thereafter',
+             'number', 'one', 'done', 'another', 'thick', 'open', 'given', 'needed', 'ordering', 'twenty', 'top',
+             'system', 'least', 'name', 'anyone', 'their', 'too', 'hundred', 'gives', 'interests', 'shell', 'mostly',
+             'behind', 'nobody', 'took', 'part', 'hadnt', 'herself', 'than', 'kind', 'b', 'showed', 'older', 'likely',
+             'nevertheless', 'r', 'were', 'toward', 'and', 'sees', 'wasnt', 'turned', 'few', 'say', 'have', 'need',
+             'seem', 'saw', 'orders', 'latter', 'that', 'also', 'take', 'which', 'wanting', 'sure', 'shall', 'knew',
+             'wells', 'most', 'eight', 'amongst', 'nothing', 'why', 'parting', 'noone', 'later', 'm', 'amoungst', 'mrs',
+             'points', 'fact', 'show', 'anyway', 'ending', 'find', 'state', 'should', 'only', 'going', 'pointed', 'do',
+             'his', 'get', 'de', 'cannot', 'longest', 'werent', 'during', 'him', 'areas', 'h', 'cry', 'she', 'x',
+             'where', 'theirs', 'we', 'whys', 'see', 'computer', 'are', 'best', 'said', 'ways', 'away', 'please',
+             'enough', 'smallest', 'between', 'neither', 'youll', 'across', 'ends', 'never', 'opening', 'however',
+             'come', 'both', 'c', 'last', 'many', 'ill', 'whereafter', 'against', 'etc', 's', 'became', 'faces',
+             'whole', 'asked', 'con', 'among', 'co', 'afterwards', 'point', 'seems', 'whatever', 'furthered', 'hers',
+             'moreover', 'throughout', 'furthers', 'puts', 'three', 'been', 'whos', 'whom', 'much', 'dont', 'wherein',
+             'interest', 'empty', 'wants', 'fire', 'beforehand', 'else', 'worked', 'an', 'former', 'present', 'case',
+             'myself', 'theyve', 'these', 'bill', 'n', 'will', 'while', 'theres', 'ive', 'would', 'backing', 'is',
+             'thus', 'it', 'cant', 'someone', 'im', 'in', 'ie', 'id', 'if', 'different', 'inc', 'perhaps', 'things',
+             'make', 'same', 'any', 'member', 'parts', 'several', 'higher', 'used', 'upon', 'uses', 'thoughts', 'hows',
+             'off', 'whereby', 'largely', 'i', 'youre', 'well', 'anybody', 'finds', 'thought', 'without', 'greatest',
+             'very', 'the', 'otherwise', 'yours', 'latest', 'newest', 'just', 'less', 'being', 'when', 'detail',
+             'front', 'rooms', 'facts', 'yet', 'wed', 'had', 'except', 'sometimes', 'lets', 'interested', 'has',
+             'ought', 'gave', 'around', 'big', 'showing', 'possible', 'early', 'five', 'know', 'like', 'necessary', 'd',
+             'herse', 'theyre', 'either', 'fully', 'become', 'works', 'grouping', 'therein', 'twelve', 'shed', 'once',
+             'because', 'old', 'often', 'namely', 'some', 'back', 'towards', 'shes', 'mine', 'himse', 'thinks', 'for',
+             'bottom', 'though', 'per', 'everything', 'does', 't', 'be', 'who', 'seconds', 'nowhere', 'although',
+             'sixty', 'by', 'on', 'about', 'goods', 'asks', 'anything', 'of', 'o', 'whence', 'youve', 'or', 'own',
+             'whats', 'formerly', 'into', 'within', 'due', 'down', 'hes', 'beings', 'right', 'theyd', 'couldnt', 'your',
+             'her', 'area', 'downed', 'there', 'long', 'hed', 'way', 'was', 'opens', 'himself', 'elsewhere', 'becoming',
+             'but', 'somehow', 'newer', 'shant', 'highest', 'with', 'he', 'made', 'places', 'whether', 'j', 'up', 'us',
+             'below', 'un', 'problem', 'z', 'clear', 'v', 'ordered', 'certain', 'describe', 'am', 'general', 'as',
+             'sometime', 'at', 'face', 'fill', 'again', 'hasnt', 'theyll', 'no', 'whereas', 'generally', 'backs',
+             'ourselves', 'grouped', 'other', 'latterly', 'wheres', 'you', 'really', 'felt', 'problems', 'important',
+             'sides', 'began', 'younger', 'e', 'longer', 'came', 'backed', 'together', 'u', 'presenting', 'serious'}
 
 
 class DecisionTreeNode:
@@ -51,6 +105,40 @@ class FilesData:
 
     # Actual word for the word
     word_list_with_actual_word = {}
+
+    def re_initialize(self):
+        self.spam_words_f = {}
+        self.n_spam_words_f = {}
+
+        # Variables to store number probability of a word appearing in spam/non spam files considering freq. of word
+        self.p_spam_words_f = {}
+        self.p_n_spam_words_f = {}
+
+        # Variable that store no. of files that has the particular word
+        self.no_of_files_with_this_word_in_spam = {}
+        self.no_of_files_with_this_word_in_n_spam = {}
+
+        # Variable that store probability of word appearing in a document
+        self.p_spam_words_01 = {}
+        self.p_n_spam_words_01 = {}
+
+        # Variables to store file count
+        self.spam_files_count = 0
+        self.n_spam_files_count = 0
+
+        # Variables to store word count
+        self.total_words_spam_files = 0
+        self.total_words_n_spam_files = 0
+
+        # Variables that store file as a word frequency list
+        self.spam_files = []
+        self.n_spam_files = []
+
+        # List of words
+        self.words = {}
+
+        # Actual word for the word
+        self.word_list_with_actual_word = {}
 
 
 class ProbabilityTable:
@@ -120,6 +208,8 @@ def read_file(file_name, current_data, file_type):
             if not (word in fd.words):
                 fd.words[word] = 1
                 fd.word_list_with_actual_word[word] = actual_word
+            else:
+                fd.words[word] += 1
             if word in words:
                 words[word] += 1
             else:
@@ -164,7 +254,7 @@ def get_p_distribution():
     return 0
 
 
-def write_model(file_path):
+def write_model_bayes(file_path):
     output_file = open(file_path, 'w')
     for word in pt.probability_table:
         output_file.write('%s %s ' % (word, pt.probability_table[word][0]))
@@ -188,7 +278,8 @@ def find_p_given_words(x_files):
         probability_f = 1.0
         for word in mail:
             if word in pt.probability_table:
-                probability_f *= pt.probability_table[word][0] / pt.probability_table[word][1]
+                for i in range(mail[word]):
+                    probability_f *= pt.probability_table[word][0] / pt.probability_table[word][1]
                 probability_01 *= pt.probability_table[word][2] / pt.probability_table[word][3]
 
         if probability_f > 1.0:
@@ -200,7 +291,6 @@ def find_p_given_words(x_files):
             result[2] += 1
         else:
             result[3] += 1
-
     return result
 
 
@@ -226,6 +316,39 @@ def print_most_probable_words(words):
     for word in words:
         result.append(fd.word_list_with_actual_word[word])
     return result
+
+
+def train_bayes():
+    email_directories = get_file_list(data_set)
+    get_file_data(email_directories, data_set)
+    get_p_distribution()
+    write_model_bayes(model_file)
+
+    print ""
+    g_words = find_most_probable_words(0, 1)
+    print "P(S=1|w) considering f:" + str(print_most_probable_words(g_words))
+    g_words = find_most_probable_words(2, 3)
+    print "P(S=1|w) considering p:" + str(print_most_probable_words(g_words))
+    g_words = find_most_probable_words(1, 0)
+    print "P(S=0|w) considering f:" + str(print_most_probable_words(g_words))
+    g_words = find_most_probable_words(3, 2)
+    print "P(S=0|w) considering p:" + str(print_most_probable_words(g_words))
+
+
+def test_bayes():
+    read_model(model_file)
+    email_directories = get_file_list(data_set)
+    get_file_data(email_directories, data_set)
+    result1 = find_p_given_words(fd.spam_files)
+    result2 = find_p_given_words(fd.n_spam_files)
+    print "ConfusionMatrix where index 0 = Spam and index 1 = Not Spam, row i column j show the number "
+    print "of test exemplars whose correct label is i, but that were classified as j"
+
+    confusion_matrix_f = [[result1[0], result1[1]], [result2[0], result2[1]]]
+    confusion_matrix_01 = [[result1[2], result1[3]], [result2[2], result2[3]]]
+
+    print "freq. of word: " + str(confusion_matrix_f)
+    print "pres. of word: " + str(confusion_matrix_01)
 
 
 def find_word_based_on_entropy(table, words, word_for_s):
@@ -260,6 +383,7 @@ def find_word_based_on_entropy(table, words, word_for_s):
             total_samples_branch_true = 1
         if total_samples_branch_false == 0:
             total_samples_branch_false = 1
+
         # Branch true:word present
         m1_by_m_r_branch = 1.0 * s_ns_count_for_word[word][0] / total_samples_branch_true
         m2_by_m_r_branch = 1.0 * s_ns_count_for_word[word][1] / total_samples_branch_true
@@ -308,8 +432,8 @@ def rec_generate_decision_tree(word_list, table, word_for_s):
     result = []
     while len(word_list) != 0 and len(table) != 0:
         [word, p_spam_l_branch, p_spam_r_branch] = find_word_based_on_entropy(table, word_list, word_for_s)
-        [left_split_table, right_split_table] = split_table(table, dt_word)
-        word_list.pop(word)
+        [left_split_table, right_split_table] = split_table(word, table)
+        word_list.remove(word)
 
         #####
         # Create tree here
@@ -344,8 +468,8 @@ def rec_generate_decision_tree(word_list, table, word_for_s):
                 result = ["NotSpam"]
             else:
                 # Make subtree
-                node.left = rec_generate_decision_tree(word_list, left_split_table, word_for_s)[1]
-                result = [rec_generate_decision_tree(word_list, left_split_table, word_for_s)[0]]
+                node.left = rec_generate_decision_tree(word_list, left_split_table, word_for_s)
+                # result = [rec_generate_decision_tree(word_list, left_split_table, word_for_s)[0]]
 
             # Right node
             if p_spam_r_branch >= 0.9:
@@ -358,11 +482,71 @@ def rec_generate_decision_tree(word_list, table, word_for_s):
                 result.append("NotSpam")
             else:
                 # Make subtree
-                node.right = rec_generate_decision_tree(word_list, left_split_table, word_for_s)[1]
-                result.append(rec_generate_decision_tree(word_list, right_split_table, word_for_s)[0])
+                node.right = rec_generate_decision_tree(word_list, left_split_table, word_for_s)
+                # result.append(rec_generate_decision_tree(word_list, right_split_table, word_for_s)[0])
 
-    return [result, node]
+    return node
 
+
+def test_file_dt(my_file, dt):
+    while dt != word_for_spam and dt != word_for_n_spam:
+        if dt.word in my_file:
+            dt = dt.right
+        else:
+            dt = dt.left
+
+    if dt == word_for_spam:
+        return True
+    else:
+        return False
+
+
+def train_dt():
+    email_directories = get_file_list(data_set)
+    get_file_data(email_directories, data_set)
+    all_files = []
+    for x_file in fd.spam_files:
+        x_file[word_for_spam] = 1
+        all_files.append(x_file)
+    for x_file in fd.n_spam_files:
+        all_files.append(x_file)
+    my_words = []
+    for this_word in fd.words:
+        if fd.words[this_word] > 10:
+            if this_word not in STOPWORDS:
+                my_words.append(this_word)
+    return rec_generate_decision_tree(my_words, all_files, word_for_spam)
+
+
+def test_dt():
+    head = read_model_dt(model_file)
+    email_directories = get_file_list(data_set)
+    get_file_data(email_directories, data_set)
+    confusion_matrix_01 = [0, 0, 0, 0]
+    for x_file in fd.spam_files:
+        if test_file_dt(x_file, head):
+            confusion_matrix_01[0] += 1
+        else:
+            confusion_matrix_01[1] += 1
+    for x_file in fd.n_spam_files:
+        if test_file_dt(x_file, head):
+            confusion_matrix_01[2] += 1
+        else:
+            confusion_matrix_01[3] += 1
+    print confusion_matrix_01
+
+
+def write_model_dt(file_path, head):
+    output_file = open(file_path+".pkl", 'wb')
+    pickle.dump(head, output_file, pickle.HIGHEST_PROTOCOL)
+    output_file.close()
+
+
+def read_model_dt(file_path):
+    input_file = open(file_path+".pkl", 'rb')
+    dt = pickle.load(input_file)
+    input_file.close()
+    return dt
 
 start_time = time.time()
 print time.asctime(time.localtime(time.time()))
@@ -374,71 +558,23 @@ print ""
 
 fd = FilesData()
 pt = ProbabilityTable()
-head = DecisionTreeNode()
 word_for_spam = "SSSSpam"
 word_for_n_spam = "NotSSSSpam"
 
 
 if mode == "train" and technique == "bayes":
-    email_directories = get_file_list(data_set)
-    get_file_data(email_directories, data_set)
-    get_p_distribution()
-    write_model(model_file)
-
-    print ""
-    g_words = find_most_probable_words(0, 1)
-    print "P(S=1|w) considering f:" + str(print_most_probable_words(g_words))
-    g_words = find_most_probable_words(2, 3)
-    print "P(S=1|w) considering presense of word in spam:" + str(print_most_probable_words(g_words))
-    g_words = find_most_probable_words(1, 0)
-    print "P(S=0|w) considering f:" + str(print_most_probable_words(g_words))
-    g_words = find_most_probable_words(3, 2)
-    print "P(S=0|w) considering presense of word in spam:" + str(print_most_probable_words(g_words))
+    train_bayes()
 
 if mode == "test" and technique == "bayes":
-    read_model(model_file)
-    email_directories = get_file_list(data_set)
-    get_file_data(email_directories, data_set)
-    result1 = find_p_given_words(fd.spam_files)
-    result2 = find_p_given_words(fd.n_spam_files)
-    print "ConfusionMatrix where index 0 = Spam and index 1 = Not Spam, row i column j show the number "
-    print "of test exemplars whose correct label is i, but that were classified as j"
-
-    confusionMatrix_f = [[result1[0], result1[1]], [result2[0], result2[1]]]
-    confusionMatrix_01 = [[result1[2], result1[3]], [result2[2], result2[3]]]
-
-    print "Considering f: " + str(confusionMatrix_f)
-    print "Considering presence of word: " + str(confusionMatrix_01)
+    test_bayes()
 
 if mode == "train" and technique == "dt":
-    print "get file list"
-    email_directories = get_file_list(data_set)
-    print "got file list"
-    print "get file data"
-    get_file_data(email_directories, data_set)
-    print "got file data"
-    all_files = []
-    print "1st part completed"
-    for x_file in fd.spam_files:
-        x_file[word_for_spam] = 1
-        all_files.append(x_file)
-    for x_file in fd.n_spam_files:
-        all_files.append(x_file)
-    print "files read"
-    my_words = []
-    for this_word in fd.words:
-        if fd.words[this_word] > 10:
-            my_words.append(this_word)
-    print len(my_words)
-    head = rec_generate_decision_tree(my_words, all_files, word_for_spam)
+    dt_head = train_dt()
+    write_model_dt(model_file, dt_head)
 
+if mode == "test" and technique == "dt":
+    test_dt()
 
-if mode == "dt" and technique == "try":
-    g_table = [{"b": 1, "spam": 1}, {"b": 1, "spam": 1}, {"c": 1}]
-    dt_words = ["a", "b"]
-    dt_word_for_s = "spam"
-    dt_word = find_word_based_on_entropy(g_table, dt_words, dt_word_for_s)
-    split_table(g_table, dt_word)
 
 #######################
 end_time = time.time()
