@@ -9,6 +9,8 @@ from random import randint
 import re
 
 # Words to be ignored while learning
+import time
+
 STOPWORDS = {'all', 'pointing', 'whoever', 'four', 'go', 'mill', 'oldest', 'seemed', 'whose', 'certainly', 'young', 'p',
              'presents', 'to', 'asking', 'those', 'under', 'far', 'every', 'yourselves', 'presented', 'did', 'turns',
              'large', 'small', 'havent', 'thereupon', 'parted', 'smaller', 'says', 'ten', 'yourself', 'whens', 'here',
@@ -61,26 +63,64 @@ STOPWORDS = {'all', 'pointing', 'whoever', 'four', 'go', 'mill', 'oldest', 'seem
              'ourselves', 'grouped', 'other', 'latterly', 'wheres', 'you', 'really', 'felt', 'problems', 'important',
              'sides', 'began', 'younger', 'e', 'longer', 'came', 'backed', 'together', 'u', 'presenting', 'serious'}
 
-def testData(words, probabilityTable, p_T, defaultDict):
-    probability = 1
+
+def testData(words, probabilityTable, p_T):
     p = {}
-    #words = set(words).intersection(probabilityTable.keys())
-    words = set(words)
-    words = [word for word in words if word not in STOPWORDS]
+    #words = set(words)
+    #words = [word for word in words if word not in STOPWORDS]
     for topic in p_T:
-        #p[topic] = math.log10(p_T[topic])
         p[topic] = 0
         for word in words:
-			if word in probabilityTable:	
-				if topic in probabilityTable[word]:
-					p[topic] += math.log10(probabilityTable[word][topic])
-				else:
-					#p[topic] += math.log10(1.0/defaultDict[topic])
-					p[topic] += -6
-			else:
-				#p[topic] += math.log10(1.0/defaultDict[topic])
-				p[topic] += -6
+            if word in probabilityTable:
+                if topic in probabilityTable[word]:
+                    p[topic] += math.log10(probabilityTable[word][topic])
+                else:
+                    p[topic] += -6
+            else:
+                p[topic] += -6
     return max(p.iterkeys(), key=(lambda k: p[k]))
+
+
+def get_words(content):
+    return re.sub('[^a-zA-Z \n]', '', content).lower().split()
+
+
+class DocumentClassification:
+    def __init__(self):
+        self.docCountInTopic = {}
+        self.words_in_topic = {}
+        self.p_w_t = {}
+        self.count_wordDoc_per_topic = {}
+        self.totalDocCount = 0
+        pass
+
+    def processDocument(self, words, topic):
+        self.docCountInTopic[topic] += 1
+        # words = [word for word in words if word not in STOPWORDS]
+        if topic in self.words_in_topic:
+            self.words_in_topic[topic] += len(words)
+        else:
+            self.words_in_topic[topic] = len(words)
+        for word in words:
+            if word in self.p_w_t:
+                if topic in self.p_w_t[word]:
+                    self.p_w_t[word][topic] += 1
+                else:
+                    self.p_w_t[word][topic] = 1
+            else:
+                self.p_w_t[word] = {topic: 1}
+        '''wordSet = set(words)
+        for word in wordSet:
+            if word in self.count_wordDoc_per_topic:
+                if topic in self.count_wordDoc_per_topic[word]:
+                    self.count_wordDoc_per_topic[word][topic] += 1
+                else:
+                    self.count_wordDoc_per_topic[word][topic] = 1
+            else:
+                self.count_wordDoc_per_topic[word] = {topic: 1}
+        '''
+        self.totalDocCount += 1
+
 
 if __name__ == "__main__":
     fraction = 0  # initialize fraction to 0
@@ -115,18 +155,16 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if mode == 'train':
+        strt = time.time()
+        dc = DocumentClassification()
         bias = fraction * 100
-        docCountInTopic = {}
-        totalDocCount = 0
-        p_w_t = {}
-        words_in_topic = {}
-        count_wordDoc_per_topic = {}
         topics = os.listdir(dataset_directory)  # list of all topics
         for word in topics[:]:
             if word.startswith('.'):
                 topics.remove(word)
         for topic in topics:
-            docCountInTopic[topic] = 0
+            dc.docCountInTopic[topic] = 0
+        unknownList = dict()
         for topic in topics:
             documents = os.listdir(dataset_directory + "/" + topic)
             for word in documents[:]:
@@ -139,87 +177,65 @@ if __name__ == "__main__":
                 # flip a coin according to fraction
                 flip = randint(0, 100)
                 if flip > bias:  # topic  = unknown if flip > bias
-                    filename_with_path = (dataset_directory + "/" + "unknown" + "/" + document)
-                    if 'unknown' in docCountInTopic:
-                        docCountInTopic['unknown'] += 1
-                    else:
-                        docCountInTopic['unknown'] = 1
-                else:
-                    docCountInTopic[topic] += 1
+                    unknownList[dataset_directory + "/" + topic + "/" + document] = get_words(content)
+                    continue
+                dc.processDocument(get_words(content), topic)
 
-                words = re.sub('[^a-zA-Z \n]', '', content).lower().split()
-                #words = [word for word in words if word not in STOPWORDS]
-                if topic in words_in_topic:
-                    words_in_topic[topic] += len(words)
-                else:
-                    words_in_topic[topic] = len(words)
-                for word in words:
-                    if word in p_w_t:
-                        if topic in p_w_t[word]:
-                            p_w_t[word][topic] += 1
-                        else:
-                            p_w_t[word][topic] = 1
-                    else:
-                        p_w_t[word] = {topic: 1}
-                wordSet = set(words)
-                for word in wordSet:
-                    if word in count_wordDoc_per_topic:
-                        if topic in count_wordDoc_per_topic[word]:
-                            count_wordDoc_per_topic[word][topic] += 1
-                        else:
-                            count_wordDoc_per_topic[word][topic] = 1
-                    else:
-                        count_wordDoc_per_topic[word] = {topic: 1}
-                totalDocCount += 1
+        dc.p_word_in_topic = {}
+        for word in dc.p_w_t.keys():
+            dc.p_word_in_topic[word] = {}
+            for topic in dc.p_w_t[word].keys():
+                dc.p_word_in_topic[word][topic] = (dc.p_w_t[word][topic] * 1.0) / dc.words_in_topic[topic]
 
-        p_word_in_topic = {}
-        for word in p_w_t.keys():
-            p_word_in_topic[word] = {}
-            for topic in p_w_t[word].keys():
-                p_word_in_topic[word][topic] = (p_w_t[word][topic] * 1.0) / words_in_topic[topic]
+        dc.p_T = {}
+        for topic in dc.docCountInTopic:
+            dc.p_T[topic] = dc.docCountInTopic[topic] * 1.0 / dc.totalDocCount
 
-        for word in p_w_t:
-            for topic in p_w_t[word].keys():
-                p_w_t[word][topic] = p_w_t[word][topic] * 1.0 / (
-                    docCountInTopic[topic] if docCountInTopic[topic] != 0 else 1)
+        if len(unknownList) != 0:
+            for unknown_file in unknownList:
+                label = testData(unknownList[unknown_file], dc.p_word_in_topic, dc.p_T)
+                #print unknown_file, label
+                dc.processDocument(unknownList[unknown_file], label)
+                dc.p_word_in_topic = {}
+                for word in dc.p_w_t.keys():
+                    dc.p_word_in_topic[word] = {}
+                    for topic in dc.p_w_t[word].keys():
+                        dc.p_word_in_topic[word][topic] = (dc.p_w_t[word][topic] * 1.0) / dc.words_in_topic[topic]
 
-        p_count_wordDoc_per_topic = {}
-        for word in count_wordDoc_per_topic.keys():
-            p_count_wordDoc_per_topic[word] = {}
-            for topic in count_wordDoc_per_topic[word].keys():
-                p_count_wordDoc_per_topic[word][topic] = (count_wordDoc_per_topic[word][topic] * 1.0) / (
-                    docCountInTopic[topic] if docCountInTopic[topic] != 0 else 1)
-
-        p_T = {}
-        for topic in docCountInTopic:
-            p_T[topic] = docCountInTopic[topic] * 1.0 / totalDocCount
-
+                dc.p_T = {}
+                for topic in dc.docCountInTopic:
+                    dc.p_T[topic] = dc.docCountInTopic[topic] * 1.0 / dc.totalDocCount
         # Write model to file
         writeData = {
-            'p_w_t': p_w_t,
-            'p_word_in_topic': p_word_in_topic,
-            'p_count_wordDoc_per_topic': p_count_wordDoc_per_topic,
-            'p_T': p_T,
-            'docCountInTopic' : docCountInTopic,
-            'words_in_topic' : words_in_topic
-            }
+            'p_word_in_topic': dc.p_word_in_topic,
+            'p_T': dc.p_T,
+        }
         with open(model_file, "w+") as f:
             json.dump(writeData, f, indent=2)
-        f.close()
+        zz = {}
+        for topic in topics:
+            maxVal = -1
+            a = ''
+            for word in dc.p_word_in_topic:
+                if word not in STOPWORDS and topic in dc.p_word_in_topic[word] and dc.p_word_in_topic[word][topic] > maxVal:
+                    maxVal = dc.p_word_in_topic[word][topic]
+                    a = word
+            zz[topic] = a
+        with open("distinctive_words.txt", "w+") as f:
+            json.dump(zz, f, indent=4)
+        print time.time() - strt
     else:  # test mode
         # read the learned model
         count_doc = 0
-        count_accuracy_p2 = 0
         count_accuracy_p3 = 0
-        with open(model_file) as f:
-            readData = json.load(f)
-        p_T = readData['p_T']
-        p_word_in_topic = readData['p_word_in_topic']
-        p_count_wordDoc_per_topic = readData['p_count_wordDoc_per_topic']
-        p_w_t = readData['p_w_t']
-        docCountInTopic = readData['docCountInTopic']
-        words_in_topic = readData['words_in_topic']
-
+        try:
+            with open(model_file) as f:
+                readData = json.load(f)
+            p_T = readData['p_T']
+            p_word_in_topic = readData['p_word_in_topic']
+        except:
+            print "Invalid Model File!"
+            sys.exit(1)
         topics = os.listdir(dataset_directory)  # list of all topics
         for word in topics[:]:
             if word.startswith('.'):
@@ -233,13 +249,8 @@ if __name__ == "__main__":
                 filename_with_path = (dataset_directory + "/" + topic + "/" + document)
                 with open(filename_with_path) as f:
                     content = f.read()
-                words = re.sub('[^a-zA-Z \n]', '', content).lower().split()
-                #p1 = testData(words, p_w_t, p_T, {})
-                p2 = testData(words, p_count_wordDoc_per_topic, p_T, docCountInTopic)
-                p3 = testData(words, p_word_in_topic, p_T, words_in_topic)
+                p3 = testData(get_words(content), p_word_in_topic, p_T)
                 count_doc += 1
-                if topic == p2: count_accuracy_p2 += 1
-                if topic == p3: count_accuracy_p3 += 1
-        f.close()
-        print "Accuracy for p2: ", (count_accuracy_p2*1.0/count_doc)*100
-        print "Accuracy for p3: ", (count_accuracy_p3*1.0/count_doc)*100
+                if topic == p3:
+                    count_accuracy_p3 += 1
+        print "Accuracy for p3: ", (count_accuracy_p3 * 1.0 / count_doc) * 100
