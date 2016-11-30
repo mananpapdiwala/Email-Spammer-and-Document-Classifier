@@ -95,7 +95,10 @@ class DocumentClassification:
         pass
 
     def processDocument(self, words, topic):
-        self.docCountInTopic[topic] += 1
+        if topic in self.docCountInTopic:
+            self.docCountInTopic[topic] += 1
+        else:
+            self.docCountInTopic[topic] = 1
         # words = [word for word in words if word not in STOPWORDS]
         if topic in self.words_in_topic:
             self.words_in_topic[topic] += len(words)
@@ -162,8 +165,8 @@ if __name__ == "__main__":
         for word in topics[:]:
             if word.startswith('.'):
                 topics.remove(word)
-        for topic in topics:
-            dc.docCountInTopic[topic] = 0
+        #for topic in topics:
+        #    dc.docCountInTopic[topic] = 0
         unknownList = dict()
         for topic in topics:
             documents = os.listdir(dataset_directory + "/" + topic)
@@ -196,15 +199,15 @@ if __name__ == "__main__":
                 label = testData(unknownList[unknown_file], dc.p_word_in_topic, dc.p_T)
                 #print unknown_file, label
                 dc.processDocument(unknownList[unknown_file], label)
-                dc.p_word_in_topic = {}
-                for word in dc.p_w_t.keys():
-                    dc.p_word_in_topic[word] = {}
-                    for topic in dc.p_w_t[word].keys():
-                        dc.p_word_in_topic[word][topic] = (dc.p_w_t[word][topic] * 1.0) / dc.words_in_topic[topic]
+            dc.p_word_in_topic = {}
+            for word in dc.p_w_t.keys():
+                dc.p_word_in_topic[word] = {}
+                for topic in dc.p_w_t[word].keys():
+                    dc.p_word_in_topic[word][topic] = (dc.p_w_t[word][topic] * 1.0) / dc.words_in_topic[topic]
 
-                dc.p_T = {}
-                for topic in dc.docCountInTopic:
-                    dc.p_T[topic] = dc.docCountInTopic[topic] * 1.0 / dc.totalDocCount
+            dc.p_T = {}
+            for topic in dc.docCountInTopic:
+                dc.p_T[topic] = dc.docCountInTopic[topic] * 1.0 / dc.totalDocCount
         # Write model to file
         writeData = {
             'p_word_in_topic': dc.p_word_in_topic,
