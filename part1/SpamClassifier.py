@@ -319,47 +319,69 @@ def print_most_probable_words(words):
 
 
 def train_bayes():
+    print "Reading files....."
     email_directories = get_file_list(data_set)
     get_file_data(email_directories, data_set)
+    print "Files read"
+    print "Training on bayes net....."
     get_p_distribution()
+    print "Training completed"
+    print "Writing model to file....."
     write_model_bayes(model_file)
-
+    print "Model saved to file"
     print ""
+    print "Top 10 words::"
+
     g_words = find_most_probable_words(0, 1)
-    print "P(S=1|w) considering f:" + str(print_most_probable_words(g_words))
-    g_words = find_most_probable_words(2, 3)
-    print "P(S=1|w) considering p:" + str(print_most_probable_words(g_words))
+    print "\n\ttaking frequency in account:"
+    print "\n\t\tfor P(S=1|w) :" + str(print_most_probable_words(g_words))
+
     g_words = find_most_probable_words(1, 0)
-    print "P(S=0|w) considering f:" + str(print_most_probable_words(g_words))
+    print "\n\t\tfor P(S=0|w):" + str(print_most_probable_words(g_words))
+
+    print "\n\n\ttaking words as binary:"
+    g_words = find_most_probable_words(2, 3)
+    print "\t\tfor P(S=1|w):" + str(print_most_probable_words(g_words))
+
     g_words = find_most_probable_words(3, 2)
-    print "P(S=0|w) considering p:" + str(print_most_probable_words(g_words))
+    print "\n\t\tP(S=0|w):" + str(print_most_probable_words(g_words))
+
+    print "\n\nCompleted"
 
 
 def test_bayes():
+    print "Reading model....."
     read_model(model_file)
+    print "Model read"
+    print "Reading files....."
     email_directories = get_file_list(data_set)
     get_file_data(email_directories, data_set)
+    print "Files read"
+    print "Finding results....."
+
     result1 = find_p_given_words(fd.spam_files)
     result2 = find_p_given_words(fd.n_spam_files)
-    print "ConfusionMatrix where index 0 = Spam and index 1 = Not Spam, row i column j show the number "
-    print "of test exemplars whose correct label is i, but that were classified as j"
 
-    confusion_matrix_f = [[result1[0], result1[1]], [result2[0], result2[1]]]
-    confusion_matrix_01 = [[result1[2], result1[3]], [result2[2], result2[3]]]
+    confusion_matrix_f = [result1[0], result1[1], result2[0], result2[1]]
+    confusion_matrix_01 = [result1[2], result1[3], result2[2], result2[3]]
 
-    print "freq. of word: " + str(confusion_matrix_f)
-    print "pres. of word: " + str(confusion_matrix_01)
+    print "\nConfusion Matrix (Model 1: Words as binary features):"
+    print_confusion_matrix(confusion_matrix_f)
+    print "Confusion Matrix (Model 2: Words as freq):"
+    print_confusion_matrix(confusion_matrix_01)
+    print "\nTesting completed"
 
 
 def find_word_based_on_entropy(table, words, word_for_s):
     s_ns_count_for_word = {}  # word :[word present and mail counted as spam, word present and mail counted as spam,
     # word not present and mail counted as spam, word not present and mail counted as spam,]
+
     min_avg_disorder = 10
     min_avg_disorder_word = ""
     left_tree_p_spam = 0.0
     right_tree_p_spam = 0.0
     for word in words:
-        s_ns_count_for_word[word] = [0, 0, 0, 0]
+        s_ns_count_for_word[word] = [0, 0, 0, 0]           # Considering f
 
     for entry in table:
         for word in words:
@@ -375,44 +397,82 @@ def find_word_based_on_entropy(table, words, word_for_s):
                     s_ns_count_for_word[word][3] += 1
 
     for word in words:
-        total_samples_branch_true = s_ns_count_for_word[word][0] + s_ns_count_for_word[word][1]
-        total_samples_branch_false = s_ns_count_for_word[word][2] + s_ns_count_for_word[word][3]
-        total_samples = total_samples_branch_true + total_samples_branch_false
-
-        if total_samples_branch_true == 0:
-            total_samples_branch_true = 1
-        if total_samples_branch_false == 0:
-            total_samples_branch_false = 1
-
-        # Branch true:word present
-        m1_by_m_r_branch = 1.0 * s_ns_count_for_word[word][0] / total_samples_branch_true
-        m2_by_m_r_branch = 1.0 * s_ns_count_for_word[word][1] / total_samples_branch_true
-        if m1_by_m_r_branch == 0 or m2_by_m_r_branch == 0:
-            entropy_branch_true = 0
-        else:
-            entropy_branch_true = -1.0 * (m1_by_m_r_branch * math.log(m1_by_m_r_branch, 2) + m2_by_m_r_branch *
-                                          math.log(m2_by_m_r_branch, 2))
-
-        # Branch true:word present
-        m1_by_m_l_branch = 1.0 * s_ns_count_for_word[word][2] / total_samples_branch_false
-        m2_by_m_l_branch = 1.0 * s_ns_count_for_word[word][3] / total_samples_branch_false
-        if m1_by_m_l_branch == 0 or m2_by_m_l_branch == 0:
-            entropy_branch_false = 0
-        else:
-            entropy_branch_false = -1.0 * (m1_by_m_l_branch * math.log(m1_by_m_l_branch, 2) + m2_by_m_l_branch *
-                                           math.log(m2_by_m_l_branch, 2))
-
-        total_samples_branch_true = s_ns_count_for_word[word][0] + s_ns_count_for_word[word][1]
-        total_samples_branch_false = s_ns_count_for_word[word][2] + s_ns_count_for_word[word][3]
-        avg_disorder = (1.0 * total_samples_branch_true / total_samples) * entropy_branch_true + \
-                       (1.0 * total_samples_branch_false / total_samples) * entropy_branch_false
-
+        [avg_disorder, m1_by_m_r_branch, m1_by_m_l_branch] = find_disorder(s_ns_count_for_word[word])
         if avg_disorder < min_avg_disorder:
             right_tree_p_spam = m1_by_m_r_branch
             left_tree_p_spam = m1_by_m_l_branch
             min_avg_disorder = avg_disorder
             min_avg_disorder_word = word
     return [min_avg_disorder_word, left_tree_p_spam, right_tree_p_spam]
+
+
+def find_word_based_on_entropy_f(table, words, word_for_s):
+    s_ns_count_for_word = {}  # word :[word present and mail counted as spam, word present and mail counted as spam,
+    # word not present and mail counted as spam, word not present and mail counted as spam,]
+    min_avg_disorder = 20000000
+    min_avg_disorder_word = ""
+    left_tree_p_spam = 0.0
+    right_tree_p_spam = 0.0
+    for word in words:
+        s_ns_count_for_word[word] = [0, 0, 0, 0]           # Considering f
+
+    for entry in table:
+        for word in words:
+            if word in entry:
+                if word_for_s in entry:
+                    s_ns_count_for_word[word][0] += entry[word]
+                else:
+                    s_ns_count_for_word[word][1] += entry[word]
+            else:
+                if word_for_s in entry:
+                    s_ns_count_for_word[word][2] += 1
+                else:
+                    s_ns_count_for_word[word][3] += 1
+
+    for word in words:
+        [avg_disorder, m1_by_m_r_branch, m1_by_m_l_branch] = find_disorder(s_ns_count_for_word[word])
+        if avg_disorder < min_avg_disorder:
+            right_tree_p_spam = m1_by_m_r_branch
+            left_tree_p_spam = m1_by_m_l_branch
+            min_avg_disorder = avg_disorder
+            min_avg_disorder_word = word
+    return [min_avg_disorder_word, left_tree_p_spam, right_tree_p_spam]
+
+
+def find_disorder(count_list):
+    total_samples_branch_true = count_list[0] + count_list[1]
+    total_samples_branch_false = count_list[2] + count_list[3]
+    total_samples = total_samples_branch_true + total_samples_branch_false
+
+    if total_samples_branch_true == 0:
+        total_samples_branch_true = 1
+    if total_samples_branch_false == 0:
+        total_samples_branch_false = 1
+
+    m1_by_m_r_branch = 1.0 * count_list[0] / total_samples_branch_true
+    m2_by_m_r_branch = 1.0 * count_list[1] / total_samples_branch_true
+
+    # Branch true: word present
+    if m1_by_m_r_branch == 0 or m2_by_m_r_branch == 0:
+        entropy_branch_true = 0
+    else:
+        entropy_branch_true = -1.0 * (m1_by_m_r_branch * math.log(m1_by_m_r_branch, 2) + m2_by_m_r_branch *
+                                      math.log(m2_by_m_r_branch, 2))
+
+    # Branch false: word not present
+    m1_by_m_l_branch = 1.0 * count_list[2] / total_samples_branch_false
+    m2_by_m_l_branch = 1.0 * count_list[3] / total_samples_branch_false
+    if m1_by_m_l_branch == 0 or m2_by_m_l_branch == 0:
+        entropy_branch_false = 0
+    else:
+        entropy_branch_false = -1.0 * (m1_by_m_l_branch * math.log(m1_by_m_l_branch, 2) + m2_by_m_l_branch *
+                                       math.log(m2_by_m_l_branch, 2))
+
+    total_samples_branch_true = count_list[0] + count_list[1]
+    total_samples_branch_false = count_list[2] + count_list[3]
+    avg_disorder = (1.0 * total_samples_branch_true / total_samples) * entropy_branch_true + \
+                   (1.0 * total_samples_branch_false / total_samples) * entropy_branch_false
+    return [avg_disorder, m1_by_m_r_branch, m1_by_m_l_branch]
 
 
 def split_table(word, table):
@@ -427,11 +487,20 @@ def split_table(word, table):
     return [split_left, split_right]
 
 
-def rec_generate_decision_tree(word_list, table, word_for_s):
+def main_generate_decision_tree(word_list, table, word_for_s, depth):
+    dt_01 = rec_create_decision_tree(word_list, table, word_for_s, depth, True)
+    dt_f = rec_create_decision_tree(word_list, table, word_for_s, depth, False)
+    return [dt_01, dt_f]
+
+
+def rec_create_decision_tree(word_list, table, word_for_s, depth, type_01):
+    max_depth = 30
     node = DecisionTreeNode()
-    result = []
-    while len(word_list) != 0 and len(table) != 0:
-        [word, p_spam_l_branch, p_spam_r_branch] = find_word_based_on_entropy(table, word_list, word_for_s)
+    if len(word_list) != 0 and len(table) != 0:
+        if type_01:
+            [word, p_spam_l_branch, p_spam_r_branch] = find_word_based_on_entropy(table, word_list, word_for_s)
+        else:
+            [word, p_spam_l_branch, p_spam_r_branch] = find_word_based_on_entropy_f(table, word_list, word_for_s)
         [left_split_table, right_split_table] = split_table(word, table)
         word_list.remove(word)
 
@@ -439,53 +508,58 @@ def rec_generate_decision_tree(word_list, table, word_for_s):
         # Create tree here
         #####
         node.word = word
-        if len(word_list) == 0 or len(left_split_table) == 0:
+        if len(word_list) == 0 or depth > max_depth:
             if p_spam_l_branch > 0.5:
                 # Left branch Spam
                 node.left = word_for_spam
-                result = ["Spam"]
             else:
                 node.left = word_for_n_spam
-                result = ["NotSpam"]
-
-        if len(word_list) == 0 or len(right_split_table) == 0:
             if p_spam_r_branch > 0.5:
                 # Left branch Spam
                 node.right = word_for_spam
-                result.append("Spam")
             else:
                 node.right = word_for_n_spam
-                result.append("NotSpam")
-        else:
+            return node
+
+        if True:
             # Left node
             if p_spam_l_branch >= 0.9:
                 # Left branch Spam
                 node.left = word_for_spam
-                result = ["Spam"]
             elif p_spam_l_branch <= 0.1:
                 # Left branch not spam
                 node.left = word_for_n_spam
-                result = ["NotSpam"]
             else:
                 # Make subtree
-                node.left = rec_generate_decision_tree(word_list, left_split_table, word_for_s)
+                if len(left_split_table) == 0:
+                    if p_spam_l_branch > 0.5:
+                        node.left = word_for_spam
+                    else:
+                        node.right = word_for_n_spam
+                else:
+                    node.left = rec_create_decision_tree(word_list, left_split_table, word_for_s, depth + 1, type_01)
                 # result = [rec_generate_decision_tree(word_list, left_split_table, word_for_s)[0]]
 
             # Right node
             if p_spam_r_branch >= 0.9:
                 # Right branch Spam
                 node.right = word_for_spam
-                result.append("Spam")
             elif p_spam_r_branch <= 0.1:
                 # Right branch not spam
                 node.right = word_for_n_spam
-                result.append("NotSpam")
             else:
                 # Make subtree
-                node.right = rec_generate_decision_tree(word_list, left_split_table, word_for_s)
+                if len(right_split_table) == 0:
+                    if p_spam_r_branch > 0.5:
+                        node.right = word_for_spam
+                    else:
+                        node.right = word_for_n_spam
+                else:
+                    node.right = rec_create_decision_tree(word_list, right_split_table, word_for_s, depth + 1, type_01)
                 # result.append(rec_generate_decision_tree(word_list, right_split_table, word_for_s)[0])
-
-    return node
+        return node
+    print "Error"
+    return
 
 
 def test_file_dt(my_file, dt):
@@ -502,51 +576,83 @@ def test_file_dt(my_file, dt):
 
 
 def train_dt():
+    print "Reading files....."
     email_directories = get_file_list(data_set)
     get_file_data(email_directories, data_set)
+
     all_files = []
     for x_file in fd.spam_files:
         x_file[word_for_spam] = 1
         all_files.append(x_file)
     for x_file in fd.n_spam_files:
         all_files.append(x_file)
+    print "Files read"
+    print "Creating decision tree....."
     my_words = []
     for this_word in fd.words:
         if fd.words[this_word] > 10:
             if this_word not in STOPWORDS:
                 my_words.append(this_word)
-    return rec_generate_decision_tree(my_words, all_files, word_for_spam)
+    return main_generate_decision_tree(my_words, all_files, word_for_spam, 0)
+
+
+def test_dt_head(head):
+    confusion_matrix = [0, 0, 0, 0]
+    for x_file in fd.spam_files:
+        if test_file_dt(x_file, head):
+            confusion_matrix[0] += 1
+        else:
+            confusion_matrix[1] += 1
+    for x_file in fd.n_spam_files:
+        if test_file_dt(x_file, head):
+            confusion_matrix[2] += 1
+        else:
+            confusion_matrix[3] += 1
+    return confusion_matrix
 
 
 def test_dt():
-    head = read_model_dt(model_file)
+    print "Reading Model....."
+    [dt_01, dt_f] = read_model_dt(model_file)
+    print "Read Model"
+    print "Reading files....."
     email_directories = get_file_list(data_set)
     get_file_data(email_directories, data_set)
-    confusion_matrix_01 = [0, 0, 0, 0]
-    for x_file in fd.spam_files:
-        if test_file_dt(x_file, head):
-            confusion_matrix_01[0] += 1
-        else:
-            confusion_matrix_01[1] += 1
-    for x_file in fd.n_spam_files:
-        if test_file_dt(x_file, head):
-            confusion_matrix_01[2] += 1
-        else:
-            confusion_matrix_01[3] += 1
-    print confusion_matrix_01
+    print "Files read"
+    print "Finding results....."
+    confusion_matrix_01 = test_dt_head(dt_01)
+    confusion_matrix_f = test_dt_head(dt_f)
+    print "\nConfusion Matrix"
+    print "01:\n"
+    print_confusion_matrix(confusion_matrix_01)
+    print "f:\n"
+    print_confusion_matrix(confusion_matrix_f)
 
 
-def write_model_dt(file_path, head):
+def write_model_dt(file_path, x_dts):
+    [dt_01, dt_f] = x_dts
     output_file = open(file_path+".pkl", 'wb')
-    pickle.dump(head, output_file, pickle.HIGHEST_PROTOCOL)
+    pickle.dump(dt_01, output_file, pickle.HIGHEST_PROTOCOL)
+    pickle.dump(dt_f, output_file, pickle.HIGHEST_PROTOCOL)
     output_file.close()
 
 
 def read_model_dt(file_path):
     input_file = open(file_path+".pkl", 'rb')
-    dt = pickle.load(input_file)
+    dt_01 = pickle.load(input_file)
+    dt_f = pickle.load(input_file)
+
     input_file.close()
-    return dt
+    return [dt_01, dt_f]
+
+
+def print_confusion_matrix(confusion_matrix):
+    print "\t\t\t---------------------"
+    print "\t\t\t| Spam\t| Not Spam \t|"
+    print "\t\t\t|-------|----------\t|"
+    print "Spam\t\t| " + str(confusion_matrix[0]) + "\t| " + str(confusion_matrix[1]) + "\t\t|"
+    print "Not Spam\t| " + str(confusion_matrix[2]) + "\t| " + str(confusion_matrix[3]) + "\t\t|"
+    print "\t\t\t---------------------"
 
 start_time = time.time()
 print time.asctime(time.localtime(time.time()))
@@ -569,12 +675,16 @@ if mode == "test" and technique == "bayes":
     test_bayes()
 
 if mode == "train" and technique == "dt":
-    dt_head = train_dt()
-    write_model_dt(model_file, dt_head)
+    dts = train_dt()
+    print "Created decision tree"
+    print "Writing model to file....."
+    write_model_dt(model_file, dts)
+    print "Model saved to file"
+    print "Training completed"
 
 if mode == "test" and technique == "dt":
     test_dt()
-
+    print "\nTesting completed"
 
 #######################
 end_time = time.time()
