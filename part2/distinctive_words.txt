@@ -1,0 +1,22 @@
+{
+    "religion": "subject", 
+    "christian": "god", 
+    "motorcycles": "subject", 
+    "pc": "scsi", 
+    "windows": "maxaxaxaxaxaxaxaxaxaxaxaxaxaxax", 
+    "medical": "subject", 
+    "space": "space", 
+    "crypto": "key", 
+    "xwindows": "window", 
+    "atheism": "god", 
+    "autos": "car", 
+    "mac": "lines", 
+    "baseball": "subject", 
+    "hockey": "team", 
+    "mideast": "people", 
+    "graphics": "lines", 
+    "politics": "people", 
+    "electronics": "subject", 
+    "forsale": "subject", 
+    "guns": "gun"
+}
