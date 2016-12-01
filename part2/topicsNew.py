@@ -157,7 +157,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if mode == 'train':
-        strt = time.time()
+        start_time = time.time()
         dc = DocumentClassification()
         bias = fraction * 100
         topics = get_dir_contents(dataset_directory)
@@ -207,18 +207,14 @@ if __name__ == "__main__":
         }
         with open(model_file, "w+") as f:
             json.dump(writeData, f, indent=2)
-        zz = {}
+        top_words_per_topic = {}
         for topic in topics:
-            maxVal = -1
-            a = ''
-            for word in dc.p_word_in_topic:
-                if word not in STOPWORDS and topic in dc.p_word_in_topic[word] and dc.p_word_in_topic[word][topic] > maxVal:
-                    maxVal = dc.p_word_in_topic[word][topic]
-                    a = word
-            zz[topic] = a
+            top_words_per_topic[topic] = sorted(
+                [[dc.p_w_t[word][t], word] for word in dc.p_w_t for t in dc.p_w_t[word] if
+                 word not in STOPWORDS and t == topic], key=lambda element: element[0], reverse=True)[:10]
         with open("distinctive_words.txt", "w+") as f:
-            json.dump(zz, f, indent=4)
-        print time.time() - strt
+            json.dump(top_words_per_topic, f, indent=4)
+        print time.time() - start_time
     else:  # test mode
         # read the learned model
         count_doc = 0
