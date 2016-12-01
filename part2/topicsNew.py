@@ -224,18 +224,26 @@ if __name__ == "__main__":
                 readData = json.load(f)
             p_T = readData['p_T']
             p_word_in_topic = readData['p_word_in_topic']
+            print p_T
         except:
             print "Invalid Model File!"
             sys.exit(1)
         topics = get_dir_contents(dataset_directory)
+        confusion_matrix = {}
         for topic in topics:
+            confusion_matrix[topic] = {}
             documents = get_dir_contents(dataset_directory + "/" + topic)
             for document in documents:
                 filename_with_path = (dataset_directory + "/" + topic + "/" + document)
                 with open(filename_with_path) as f:
                     content = f.read()
                 p3 = testData(get_words(content), p_word_in_topic, p_T)
+                if str(p3) in confusion_matrix[topic]:
+                	confusion_matrix[topic][str(p3)] += 1
+                else:
+                	confusion_matrix[topic][str(p3)] = 1
                 count_doc += 1
                 if topic == p3:
                     count_accuracy_p3 += 1
         print "Accuracy for p3: ", (count_accuracy_p3 * 1.0 / count_doc) * 100
+        print confusion_matrix
