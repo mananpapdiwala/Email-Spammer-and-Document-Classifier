@@ -68,6 +68,7 @@ def testData(words, probabilityTable, p_T):
     p = {}
     for topic in p_T:
         p[topic] = 0
+        words = [word for word in words if word not in STOPWORDS]
         for word in words:
             if word in probabilityTable:
                 if topic in probabilityTable[word]:
@@ -172,7 +173,8 @@ if __name__ == "__main__":
                 if flip > bias:  # topic  = unknown if flip > bias
                     unknownList[dataset_directory + "/" + topic + "/" + document] = get_words(content)
                     continue
-                dc.processDocument(get_words(content), topic)
+                words = [word for word in get_words(content) if word not in STOPWORDS]
+                dc.processDocument(words, topic)
 
         dc.p_word_in_topic = {}
         for word in dc.p_w_t.keys():
