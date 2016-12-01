@@ -4,12 +4,12 @@ import json
 import os
 import sys
 import math
-from random import randint
 
 import re
 
 # Words to be ignored while learning
 import time
+from random import randint, choice
 
 STOPWORDS = {'all', 'pointing', 'whoever', 'four', 'go', 'mill', 'oldest', 'seemed', 'whose', 'certainly', 'young', 'p',
              'presents', 'to', 'asking', 'those', 'under', 'far', 'every', 'yourselves', 'presented', 'did', 'turns',
@@ -66,8 +66,6 @@ STOPWORDS = {'all', 'pointing', 'whoever', 'four', 'go', 'mill', 'oldest', 'seem
 
 def testData(words, probabilityTable, p_T):
     p = {}
-    #words = set(words)
-    #words = [word for word in words if word not in STOPWORDS]
     for topic in p_T:
         p[topic] = 0
         for word in words:
@@ -78,7 +76,18 @@ def testData(words, probabilityTable, p_T):
                     p[topic] += -6
             else:
                 p[topic] += -6
-    return max(p.iterkeys(), key=(lambda k: p[k]))
+    if len(p) > 0:
+        return max(p.iterkeys(), key=(lambda k: p[k]))
+    else:
+        return choice(get_dir_contents("train"))
+
+
+def get_dir_contents(directory):
+    topics = os.listdir(directory)  # list of all topics
+    for word in topics[:]:
+        if word.startswith('.'):
+            topics.remove(word)
+    return topics
 
 
 def get_words(content):
@@ -99,7 +108,6 @@ class DocumentClassification:
             self.docCountInTopic[topic] += 1
         else:
             self.docCountInTopic[topic] = 1
-        # words = [word for word in words if word not in STOPWORDS]
         if topic in self.words_in_topic:
             self.words_in_topic[topic] += len(words)
         else:
@@ -112,16 +120,6 @@ class DocumentClassification:
                     self.p_w_t[word][topic] = 1
             else:
                 self.p_w_t[word] = {topic: 1}
-        '''wordSet = set(words)
-        for word in wordSet:
-            if word in self.count_wordDoc_per_topic:
-                if topic in self.count_wordDoc_per_topic[word]:
-                    self.count_wordDoc_per_topic[word][topic] += 1
-                else:
-                    self.count_wordDoc_per_topic[word][topic] = 1
-            else:
-                self.count_wordDoc_per_topic[word] = {topic: 1}
-        '''
         self.totalDocCount += 1
 
 
@@ -161,18 +159,10 @@ if __name__ == "__main__":
         strt = time.time()
         dc = DocumentClassification()
         bias = fraction * 100
-        topics = os.listdir(dataset_directory)  # list of all topics
-        for word in topics[:]:
-            if word.startswith('.'):
-                topics.remove(word)
-        #for topic in topics:
-        #    dc.docCountInTopic[topic] = 0
+        topics = get_dir_contents(dataset_directory)
         unknownList = dict()
         for topic in topics:
-            documents = os.listdir(dataset_directory + "/" + topic)
-            for word in documents[:]:
-                if word.startswith('.'):
-                    documents.remove(word)
+            documents = get_dir_contents(dataset_directory + "/" + topic)
             for document in documents:
                 filename_with_path = (dataset_directory + "/" + topic + "/" + document)
                 with open(filename_with_path) as f:
@@ -197,8 +187,8 @@ if __name__ == "__main__":
         if len(unknownList) != 0:
             for unknown_file in unknownList:
                 label = testData(unknownList[unknown_file], dc.p_word_in_topic, dc.p_T)
-                #print unknown_file, label
                 dc.processDocument(unknownList[unknown_file], label)
+
             dc.p_word_in_topic = {}
             for word in dc.p_w_t.keys():
                 dc.p_word_in_topic[word] = {}
@@ -239,15 +229,9 @@ if __name__ == "__main__":
         except:
             print "Invalid Model File!"
             sys.exit(1)
-        topics = os.listdir(dataset_directory)  # list of all topics
-        for word in topics[:]:
-            if word.startswith('.'):
-                topics.remove(word)
+        topics = get_dir_contents(dataset_directory)
         for topic in topics:
-            documents = os.listdir(dataset_directory + "/" + topic)
-            for word in documents[:]:
-                if word.startswith('.'):
-                    documents.remove(word)
+            documents = get_dir_contents(dataset_directory + "/" + topic)
             for document in documents:
                 filename_with_path = (dataset_directory + "/" + topic + "/" + document)
                 with open(filename_with_path) as f:
