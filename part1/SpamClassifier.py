@@ -1,8 +1,134 @@
-# Commenting
-# Decision Model
-# Didn't replace '@' and ':' knowingly, as the results were better. Considering them as part of word.
+# Considered abc@xyz as a single word rather that 2 words, as the accuracy is better this way
+# Also, considered http:abc as a word as the accuracy is better
+# Assumes pickle can be used. Used to save decision tree as an object
+#
+#
+# Model 1: Word as a binary feature
+# Probability for a word appearing in spam mail is calculated by counting number of files in which the word appears in
+# spam mails / no of spam mails. Same goes gor non spam mails.
+# P(S=1|w) is calculated by dividing P(w|S=1)/P(w|S=0).
+#
+# Model 2: Word freq. taken into account
+# Probability for a word appearing in spam mail is calculated by counting number of times the word appeared in all
+# spam mails / no of spam mails. Same goes gor non spam mails.
+# P(S=1|w) is calculated by dividing P(w|S=1)/P(w|S=0)
+#
+# For decision tree we have selected the word which splits the data with least avg disorder and built the tree further
+# Model for dt net is saved in a .pkl file. Used pickle to save model(word is counted same as for bayes)
+#
 # Considered words containing '$' and 'USD' amount as word 'dollardollar'.
 # Considered numbers as word 'numbernumber'.
+
+# Model 2 where word frequency is taken into account works marginally better in bayes net model.
+# Model 1 where word is taken as a binary feature works marginally better in decision tree model.
+#
+# bayes net words best as a spam classifier
+# Results attached below
+
+# Results: DT
+# Training
+
+"""
+DECISION TREE: word as binary feature
+
+TRAINING:
+Node:hits
+	Left Node:zzzzlocalhostnetnoteinccom
+	Right Node(Leaf): Not Spam
+Node:zzzzlocalhostnetnoteinccom
+	Left Node:spambayes
+	Right Node(Leaf): Not Spam
+Node:spambayes
+	Left Node:subscription
+	Right Node(Leaf): Not Spam
+Node:subscription
+	Left Node(Leaf): Spam
+	Right Node:tm
+Node:tm
+	Left Node:zzzzilugexamplecom
+	Right Node(Leaf): Not Spam
+
+DECISION TREE: word as frequency
+Node:tests
+	Left Node:httpclickthruonlinecomclickq
+	Right Node(Leaf): Not Spam
+Node:httpclickthruonlinecomclickq
+	Left Node:font
+	Right Node(Leaf): Not Spam
+Node:font
+	Left Node:mv
+	Right Node(Leaf): Spam
+Node:mv
+	Left Node:jul
+	Right Node(Leaf): Spam
+Node:jul
+	Left Node:oct
+	Right Node(Leaf): Spam
+
+TEST:
+Confusion Matrix
+(Model 1: Words as binary features):
+			---------------------------------
+			| Spam	| Not Spam 	| Accuracy  |
+			|-------|----------	|-----------|
+Spam		|  1180	|     5		| 99.58%	|
+Not Spam	|    83	|  1286		| 93.94%	|
+			---------------------------------
+
+Average Accuracy: 96.76%
+
+Confusion Matrix
+(Model 2: Words as frequency):
+			---------------------------------
+			| Spam	| Not Spam 	| Accuracy  |
+			|-------|----------	|-----------|
+Spam		|  1161	|    24		| 97.97%	|
+Not Spam	|    73	|  1296		| 94.67%	|
+			---------------------------------
+
+Average Accuracy: 96.32%
+
+"""
+
+# Results: Bayes
+"""
+TRAINING:
+Top 10 words::
+
+	taking frequency in account:
+
+		for P(S=1|w) :['mortgage', 'cn', 'ba', 'cpunks@localhost', 'ssz', 'cypherpunks@ds', 'txt@dogma', 'mailings', 'locust', 'minder', 'insuranceiq', 'jm@netnoteinc', 'zzzz@jmason', 'msonormal', 'yyyy@netnoteinc', 'hq', 'mv', 'bd', 'ptsize', 'zzzzason']
+
+		for P(S=0|w):['yyyy@example', 'zdnet', 'encoding', 'fork@example', 'freshrpms', 'rpm-list@freshrpms', 'hits', 'cnet', 'lockergnome', 'rpm-zzzlist-admin@freshrpms', 'exmh', 'rssfeeds@example', 'rpm-zzzlist@freshrpms', 'iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii', 'rssfeeds@jmason', 'egwn', 'rpm', 'weblogs', 'redhat', 'listman']
+
+
+	taking words as binary:
+		for P(S=1|w):['jm@netnoteinc', 'cpunks@localhost', 'spamdeath', 'mailings', 'jun', 'cypherpunks-forward@ds', 'kr', 'cypherpunks@ds', 'cpunks@hq', 'mortgage', 'hq', 'webmaster@efi', 'frontpage', 'zzzzason', 'cdo', 'yyyy@netnoteinc', 'zzzz@jmason', 'zzzz@spamassassin', 'spamassassin-sightings@lists', 'cn']
+
+		P(S=0|w):['rpm', 'newsisfree', 'rpm-zzzlist@freshrpms', 'freshrpms', 'rpm-list-admin@freshrpms', ':rpm-list-request@freshrpms', 'hits', 'pine', 'redhat', 'lnx', 'yyyy@example', 'fork@example', 'jm-rpm@jmason', 'encoding', 'rssfeeds@jmason', 'rpm-zzzlist-admin@freshrpms', 'rpm-list@freshrpms', 'rssfeeds@example', 'egwn', ':rpm-zzzlist-request@freshrpms']
+
+TEST
+Confusion Matrix
+(Model 1: Words as binary features):
+			---------------------------------
+			| Spam	| Not Spam 	| Accuracy  |
+			|-------|----------	|-----------|
+Spam		|  1151	|    34		| 97.13%	|
+Not Spam	|    11	|  1358		| 99.2%	|
+			---------------------------------
+
+Average Accuracy: 98.16%
+Confusion Matrix
+(Model 2: Words as freq):
+			---------------------------------
+			| Spam	| Not Spam 	| Accuracy  |
+			|-------|----------	|-----------|
+Spam		|  1175	|    10		| 99.16%	|
+Not Spam	|    22	|  1347		| 98.39%	|
+			---------------------------------
+
+Average Accuracy: 98.78%
+"""
 
 import pickle
 import sys
@@ -34,6 +160,7 @@ STOPWORDS = {'all': 1, 'whys': 1, 'being': 1, 'over': 1, 'isnt': 1, 'through': 1
 
 
 class DecisionTreeNode:
+    # Decision Tree node
     def __init__(self):
         pass
 
@@ -43,6 +170,7 @@ class DecisionTreeNode:
 
 
 class FilesData:
+    # Files data stored in this class
     # Variables to store number of times a word appeared in all the spam/non spam files
     def __init__(self):
         pass
@@ -91,12 +219,14 @@ class ProbabilityTable:
 
 
 def get_file_list(x_data_set):
+    # Function to get list of files
     spam_file_list = os.listdir(x_data_set + "/spam")
     non_spam_file_list = os.listdir(x_data_set + "/notspam")
     return {"spam": spam_file_list, "notspam": non_spam_file_list}
 
 
 def get_file_data(x_all_emails_list, x_data_set):
+    # Function to get file data and store it in the FileData object
     spam_files = [{}, 0]
     not_spam_files = [{}, 0]
 
@@ -148,7 +278,6 @@ def replace_line(line):
     line = line.replace("#", " ")
     if technique == "bayes":
         line = line.replace(".", " ")
-
     return line
 
 
@@ -220,6 +349,7 @@ def read_file(file_name, current_data, file_type):
 
 
 def get_p_distribution():
+    # Function to calculate probability distribution
     p_if_not_present_f = 1.0 / fd.total_words_spam_files
     p_if_not_present_01 = 1.0 / fd.spam_files_count
     for word in fd.words:
@@ -638,18 +768,46 @@ def print_confusion_matrix(confusion_matrix):
     cm_01 = reformat_size_4(str(confusion_matrix[1]))
     cm_10 = reformat_size_4(str(confusion_matrix[2]))
     cm_11 = reformat_size_4(str(confusion_matrix[3]))
-    accuracy_S = round(confusion_matrix[0] * 100.0/(confusion_matrix[0] + confusion_matrix[1]), 2)
-    accuracy_NS = round(confusion_matrix[3] * 100.0 / (confusion_matrix[2] + confusion_matrix[3]), 2)
-    avg = round((accuracy_NS + accuracy_S)/2, 2)
-    a_S = reformat_size_4(str(accuracy_S) + "%")
-    a_NS = reformat_size_4(str(accuracy_NS) + "%")
+    accuracy_s = round(confusion_matrix[0] * 100.0/(confusion_matrix[0] + confusion_matrix[1]), 2)
+    accuracy_ns = round(confusion_matrix[3] * 100.0 / (confusion_matrix[2] + confusion_matrix[3]), 2)
+    avg = round((accuracy_ns + accuracy_s)/2, 2)
+    a_s = reformat_size_4(str(accuracy_s) + "%")
+    a_ns = reformat_size_4(str(accuracy_ns) + "%")
     print "\t\t\t---------------------------------"
     print "\t\t\t| Spam\t| Not Spam \t| Accuracy  |"
     print "\t\t\t|-------|----------\t|-----------|"
-    print "Spam\t\t| " + cm_00 + "\t| " + cm_01 + "\t\t| " + a_S + "\t|"
-    print "Not Spam\t| " + cm_10 + "\t| " + cm_11 + "\t\t| " + a_NS + "\t|"
+    print "Spam\t\t| " + cm_00 + "\t| " + cm_01 + "\t\t| " + a_s + "\t|"
+    print "Not Spam\t| " + cm_10 + "\t| " + cm_11 + "\t\t| " + a_ns + "\t|"
     print "\t\t\t---------------------------------"
     print "\nAverage Accuracy: " + str(avg) + "%"
+
+
+def print_decision_model(dt, height):
+    print "\tNode:" + dt.word
+    call_left = False
+    call_right = False
+    if dt.left == word_for_spam:
+        print "\t\tLeft Node(Leaf): Spam"
+    elif dt.left == word_for_n_spam:
+        print "\t\tLeft Node(Leaf): Not Spam"
+    elif dt.left != word_for_spam and dt.left != word_for_n_spam:
+        print "\t\tLeft Node:" + dt.left.word
+        call_left = True
+
+    if dt.right == word_for_spam:
+        print "\t\tRight Node(Leaf): Spam"
+    elif dt.right == word_for_n_spam:
+        print "\t\tRight Node(Leaf): Not Spam"
+    elif dt.right != word_for_spam and dt.right != word_for_n_spam:
+        print "\t\tRight Node:" + dt.right.word
+        call_right = True
+
+    if call_left and height < 4:
+        print_decision_model(dt.left, height + 1)
+
+    if call_right and height < 4:
+        print_decision_model(dt.right, height + 1)
+
 
 start_time = time.time()
 print time.asctime(time.localtime(time.time()))
@@ -677,6 +835,10 @@ if mode == "train" and technique == "dt":
     write_model_dt(model_file, dts)
     print "Model saved to file"
     print "Training completed"
+    print "\nDECISION TREE: word as binary feature"
+    print_decision_model(dts[0], 0)
+    print "\nDECISION TREE: word as frequency"
+    print_decision_model(dts[1], 0)
 
 if mode == "test" and technique == "dt":
     test_dt()
@@ -684,6 +846,5 @@ if mode == "test" and technique == "dt":
 
 #######################
 end_time = time.time()
-print ""
 print time.asctime(time.localtime(time.time()))
 print end_time - start_time
