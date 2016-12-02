@@ -1,171 +1,258 @@
 # Usage:
 #   ./topics mode dataset-directory model-file [fraction]
+# Accuracy for fraction = 0.0 : 3.30589484865
+# Accuracy for fraction = 0.1 : 74.2166755178
+# Accuracy for fraction = 0.2 : 79.8990971853
+# Accuracy for fraction = 0.3 : 80.1779075943
+# Accuracy for fraction = 0.4 : 80.7620817844
+# Accuracy for fraction = 0.5 : 82.1295804567
+# Accuracy for fraction = 0.6 : 83.297928837
+# Accuracy for fraction = 0.7 : 82.7403080191
+# Accuracy for fraction = 0.8 : 83.4838024429
+# Accuracy for fraction = 0.9 : 83.4439723845
+# Accuracy for fraction = 1.0 : 83.8422729687
+#
+from json import load, dump
+from os import listdir
+from sys import exit, argv
+from math import log10
+from re import sub
+from random import randint, choice
 
-import json
-import os
-import sys
-from random import randint
-import re
-import math
-
+# Stopwords Reference: https://github.com/Alir3z4/stop-words/blob/0e438af98a88812ccc245cf31f93644709e70370/english.txt
 # Words to be ignored while learning
-STOPWORDS = {'i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 'yours', 'yourself',
-             'yourselves', 'he', 'him', 'his', 'himself', 'she', 'her', 'hers', 'herself', 'it', 'its', 'itself',
-             'they', 'them', 'their', 'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this', 'that', 'these',
-             'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having', 'do',
-             'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while',
-             'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 'before',
-             'after', 'above', 'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again',
-             'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each',
-             'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than',
-             'too', 'very', 's', 't', 'can', 'will', 'just', 'don', 'should', 'now', 'd', 'll', 'm', 'o', 're', 've',
-             'y', 'ain', 'aren', 'couldn', 'didn', 'doesn', 'hadn', 'hasn', 'haven', 'isn', 'ma', 'mightn', 'mustn',
-             'needn', 'shan', 'shouldn', 'wasn', 'weren', 'wouldn', 'arent', 'ive', 'dont', 'first', 'could'}
+STOPWORDS = {'all', 'whys', 'being', 'over', 'isnt', 'through', 'yourselves', 'hell', 'its', 'before', 'wed', 'with',
+             'had', 'should', 'to', 'lets', 'under', 'ours', 'has', 'ought', 'do', 'them', 'his', 'very', 'cannot',
+             'they', 'werent', 'not', 'during', 'yourself', 'him', 'nor', 'wont', 'did', 'theyre', 'this', 'she', 'up',
+             'each', 'havent', 'where', 'shed', 'because', 'doing', 'theirs', 'some', 'whens', 'are', 'further', 'we',
+             'ourselves', 'out', 'what', 'for', 'heres', 'while', 'does', 'above', 'between', 'youll', 'be', 'who',
+             'were', 'here', 'hers', 'by', 'both', 'about', 'would', 'wouldnt', 'didnt', 'ill', 'against', 'arent',
+             'youve', 'theres', 'or', 'thats', 'weve', 'own', 'whats', 'dont', 'into', 'youd', 'whom', 'down', 'doesnt',
+             'theyd', 'couldnt', 'your', 'from', 'her', 'hes', 'there', 'only', 'been', 'whos', 'hed', 'few', 'too',
+             'themselves', 'was', 'until', 'more', 'himself', 'on', 'but', 'you', 'hadnt', 'shant', 'mustnt', 'herself',
+             'than', 'those', 'he', 'me', 'myself', 'theyve', 'these', 'cant', 'below', 'of', 'my', 'could', 'shes',
+             'and', 'ive', 'then', 'wasnt', 'is', 'am', 'it', 'an', 'as', 'itself', 'im', 'at', 'have', 'in', 'any',
+             'if', 'again', 'hasnt', 'theyll', 'no', 'that', 'when', 'same', 'id', 'how', 'other', 'which', 'shell',
+             'shouldnt', 'our', 'after', 'most', 'such', 'why', 'wheres', 'a', 'hows', 'off', 'i', 'youre', 'well',
+             'yours', 'their', 'so', 'the', 'having', 'once'}
 
 
-# Convert set obj to list for writing json into file
-def set_default(obj):
-    if isinstance(obj, set):
-        return list(obj)
-    raise TypeError
+def calc_p_T(dc):  # Calculate p(Topic)
+    dc.p_T = {}
+    for topic in dc.docCountInTopic:
+        dc.p_T[topic] = dc.docCountInTopic[topic] * 1.0 / dc.totalDocCount
+    return dc
 
 
-# Function returns dictionary with words as keys and their frequency in a doc as the values
-def frequency(words):
-    wordCount = {}
-    for word in words:
-        if word in wordCount:
-            wordCount[word] += 1
+def calc_p_word_in_topic(dc):  # Calculate p(w/Topic) for all words
+    dc.p_word_in_topic = {}
+    for word in dc.p_w_t.keys():
+        dc.p_word_in_topic[word] = {}
+        for topic in dc.p_w_t[word].keys():
+            dc.p_word_in_topic[word][topic] = (dc.p_w_t[word][topic] * 1.0) / dc.words_in_topic[topic]
+    return dc
+
+
+def write_to_file(file_name, writeData):  # Write the learned model
+    with open(file_name, "w+") as f:
+        dump(writeData, f, indent=2)
+
+
+def print_matrix(topics, confusion_matrix):  # Print the confusion matrix
+    print '            ',
+    for t in topics:
+        print '%-12s' % t,
+    print ''
+    for actual_topic in topics:
+        print '%-12s' % actual_topic,
+        for test_topic in topics:
+            if actual_topic in confusion_matrix:
+                if test_topic in confusion_matrix[actual_topic]:
+                    print '%-12i' % confusion_matrix[actual_topic][test_topic],
+                else:
+                    print '%-12i' % 0,
+            else:
+                for i in range(20):
+                    print '%-12i' % 0,
+        print ''
+
+
+def testData(words, probabilityTable, p_T):
+    # Function tests a document on learned model and returns the proposed label
+    p = {}
+    for topic in p_T:
+        p[topic] = 0
+        for word in words:
+            if word in probabilityTable:
+                if topic in probabilityTable[word]:
+                    p[topic] += log10(probabilityTable[word][topic])
+                else:
+                    p[topic] += -6
+            else:
+                p[topic] += -6
+    if len(p) > 0:
+        return max(p.iterkeys(), key=(lambda k: p[k]))
+    else:
+        return choice(get_dir_contents("train"))
+
+
+def get_dir_contents(directory):
+    # Get list of files or directory in input directories
+    # Assumption the files starting with '.' are not to be used for learning
+    topics = listdir(directory)  # list of all topics
+    for word in topics[:]:
+        if word.startswith('.'):
+            topics.remove(word)
+    return topics
+
+
+def get_words(content):  # get list of all words in file except STOPWORDS
+    return [word for word in sub('[^a-zA-Z \n]', '', content).lower().split() if word not in STOPWORDS]
+
+
+def validate_initialize():  # Validate command line input and initialize variables
+    fraction = 0  # initialize fraction to 0
+    if len(argv) > 5:  # check if too many arguments
+        print("Too many arguments!")
+        exit(1)
+    if len(argv) < 4:  # check if too few arguments
+        print("Too few arguments!")
+        exit(1)
+    mode = argv[1]
+    dataset_directory = argv[2]
+    model_file = argv[3]
+    if mode == "train":
+        if len(argv) == 5:
+            try:
+                fraction = float(argv[4])
+                if fraction < 0 or fraction > 1:  # check invalid fraction
+                    print("Fraction should be a number between 0.0 and 1.0")
+                    exit(1)
+            except:  # invalid fraction
+                print("Fraction should be a number between 0.0 and 1.0")
+                exit(1)
+        else:  # invalid input
+            print("Train mode takes 4 command line arguments")
+            exit(1)
+    elif mode == "test":
+        if len(argv) != 4:
+            print("Test mode takes 3 command line arguments")
+            exit(1)
+    else:  # invalid mode
+        print("Invalid mode!")
+        exit(1)
+    bias = fraction * 100
+    topics = get_dir_contents(dataset_directory)
+    return bias, mode, dataset_directory, model_file, topics
+
+
+class DocumentClassification:
+    def __init__(self):
+        self.docCountInTopic = {}
+        self.words_in_topic = {}
+        self.p_w_t = {}
+        self.totalDocCount = 0
+        pass
+
+    def processDocument(self, words, topic):
+        if topic in self.docCountInTopic:
+            self.docCountInTopic[topic] += 1
         else:
-            wordCount[word] = 1
-    return wordCount
-
-
-# Total no. of words in a document
-def wordCount(words):
-    return sum(words.values())
+            self.docCountInTopic[topic] = 1
+        if topic in self.words_in_topic:
+            self.words_in_topic[topic] += len(words)
+        else:
+            self.words_in_topic[topic] = len(words)
+        for word in words:
+            if word in self.p_w_t:
+                if topic in self.p_w_t[word]:
+                    self.p_w_t[word][topic] += 1
+                else:
+                    self.p_w_t[word][topic] = 1
+            else:
+                self.p_w_t[word] = {topic: 1}
+        self.totalDocCount += 1
 
 
 if __name__ == "__main__":
-    fraction = 0  # initialize fraction to 0
-    if len(sys.argv) > 5:  # check if too many arguments
-        print("Too many arguments!")
-        sys.exit(1)
-    if len(sys.argv) < 4:  # check if too few arguments
-        print("Too few arguments!")
-        sys.exit(1)
-    mode = sys.argv[1]
-    dataset_directory = sys.argv[2]
-    model_file = sys.argv[3]
-    if mode == "train":
-        if len(sys.argv) == 5:
-            try:
-                fraction = float(sys.argv[4])
-                if fraction < 0 or fraction > 1:  # check invalid fraction
-                    print("Fraction should be a number between 0.0 and 1.0")
-                    sys.exit(1)
-            except:  # invalid fraction
-                print("Fraction should be a number between 0.0 and 1.0")
-                sys.exit(1)
-        else:  # invalid input
-            print("Invalid Input!")
-            sys.exit(1)
-    elif mode == "test":
-        if len(sys.argv) != 4:
-            print("Invalid Input!")
-            sys.exit(1)
-    else:  # invalid mode
-        print("Invalid mode!")
-        sys.exit(1)
-
+    bias, mode, dataset_directory, model_file, topics = validate_initialize()
     if mode == 'train':
-        bias = fraction * 100
-        topics = os.listdir(dataset_directory)  # list of all topics
-        for word in topics[:]:
-            if word.startswith('.'):
-                topics.remove(word)
-
-        wordList = {}
-        tf = {}
-        numarray = {}
-        puncNumCount = 0
+        print "Training...\nIt may take a few minutes."
+        dc = DocumentClassification()
+        unknownList = dict()
         for topic in topics:
-            documents = os.listdir(dataset_directory + "/" + topic)
-            print topic
-            for word in documents[:]:
-                if word.startswith('.'):
-                    documents.remove(word)
+            documents = get_dir_contents(dataset_directory + "/" + topic)
             for document in documents:
                 filename_with_path = (dataset_directory + "/" + topic + "/" + document)
                 with open(filename_with_path) as f:
                     content = f.read()
                 # flip a coin according to fraction
                 flip = randint(0, 100)
-                if flip > bias:  # topic  = unknown if flip > bias
-                    filename_with_path = (dataset_directory + "/" + "unknown" + "/" + document)
-
-                words = re.sub('[^a-zA-Z \n]', '', content).lower().split()
-                words = set(words) - STOPWORDS
-                # remove single letter words
-                for word in words.copy():
-                    if len(word) < 2:
-                        words.remove(word)
-
-                for num in content.split():
-                    if str(re.search('[a-zA-Z]', num)) == 'None':
-                        numarray[topic] = 1 if topic not in numarray else numarray[topic] + 1
-                        #puncNumCount += 1
-
-                tf[filename_with_path] = frequency(words)
-                for word in tf[filename_with_path]:
-                    tf[filename_with_path][word] *= 1.0 / wordCount(tf[filename_with_path])
-                    wordList[word] = 1 if word not in wordList else wordList[word] + 1
-        # print wordList
-        no_of_docs = len(tf)
-        for doc in tf:
-            for word in tf[doc]:
-                x = wordList[word]
-                tf[doc][word] *= math.log(no_of_docs * 1.0 / (1 + x))  # tf*idf
-
-        impWords = {}
-        for doc in tf:
-            max1 = max([[tf[doc][key], key] for key in tf[doc].keys()])
-            label = doc.split('/')[1]
-            if label not in impWords:
-                impWords[label] = {max1[1]: max1[0]}
-            else:
-                impWords[label].update({max1[1]: max1[0]})
-
-            tf[doc].pop(max1[1])
-            max1 = max([[tf[doc][key], key] for key in tf[doc].keys()])
-            label = doc.split('/')[1]
-            if label not in impWords:
-                impWords[label] = {max1[1]: max1[0]}
-            else:
-                impWords[label].update({max1[1]: max1[0]})
-
-            tf[doc].pop(max1[1])
-            max1 = max([[tf[doc][key], key] for key in tf[doc].keys()])
-            label = doc.split('/')[1]
-            if label not in impWords:
-                impWords[label] = {max1[1]: max1[0]}
-            else:
-                impWords[label].update({max1[1]: max1[0]})
-
-        print impWords
-
-        with open("model.txt", "w+") as f:
-            json.dump(impWords, f, default=set_default)
-        f.close()
-        with open("model.txt", 'rb') as f:
-            my_list = json.load(f)
-        f.close()
-        print my_list
-        with open("test/hockey/53925") as f:
-            newWords = re.sub('[^a-zA-Z \n]', '', f.read()).lower().split()
-        for topic in my_list:
-            for word in my_list[topic]:
-                if word in newWords:
-                    print topic, word
+                if flip > bias or (flip == 0 and bias == 0):  # topic  = unknown if flip > bias
+                    unknownList[dataset_directory + "/" + topic + "/" + document] = get_words(content)
+                    continue
+                words = get_words(content)
+                dc.processDocument(words, topic)
+        dc = calc_p_word_in_topic(dc)
+        dc = calc_p_T(dc)
+        if len(unknownList) != 0:  # semi-supervised / unsupervised
+            if bias == 0:  # unsupervised
+                for i in range(10):  # Learn model iteratively such that it may start converging after a few iterations
+                    dc.__init__()  # reinitialize just the frequency variables not the learned model
+                    for unknown_file in unknownList:
+                        label = testData(unknownList[unknown_file], dc.p_word_in_topic, dc.p_T)
+                        dc.processDocument(unknownList[unknown_file], label)
+                    # Overwrite the model with the new model in the iteration
+                    dc = calc_p_word_in_topic(dc)
+                    dc = calc_p_T(dc)
+            else:  # For semi-supervised learning
+                # Label the unlabeled documents using the model learned until now
+                for unknown_file in unknownList:
+                    label = testData(unknownList[unknown_file], dc.p_word_in_topic, dc.p_T)
+                    dc.processDocument(unknownList[unknown_file], label)
+                # Overwrite the model with the new model in the iteration
+                dc = calc_p_word_in_topic(dc)
+                dc = calc_p_T(dc)
+        # Write model to file
+        writeData = {
+            'p_word_in_topic': dc.p_word_in_topic,
+            'p_T': dc.p_T,
+        }
+        write_to_file(model_file, writeData)
+        top_words_per_topic = {}
+        for topic in topics:
+            top_words_per_topic[topic] = sorted(
+                [[dc.p_w_t[word][t], word] for word in dc.p_w_t for t in dc.p_w_t[word] if t == topic],
+                key=lambda element: element[0], reverse=True)[:10]
+        write_to_file("distinctive_words.txt", top_words_per_topic)
     else:  # test mode
-        pass
+        print "Testing...\nIt may take a few minutes."
+        # read the learned model
+        count_doc = 0  # Count of Documents tested
+        accuracy = 0  # Count of Documents labelled correctly
+        try:
+            with open(model_file) as f:
+                readData = load(f)  # read model
+            p_T = readData['p_T']
+            p_word_in_topic = readData['p_word_in_topic']
+        except:
+            print "Invalid Model File!"
+            exit(1)
+        confusion_matrix = {}
+        for topic in topics:
+            confusion_matrix[topic] = {}
+            documents = get_dir_contents(dataset_directory + "/" + topic)
+            for document in documents:
+                filename_with_path = (dataset_directory + "/" + topic + "/" + document)
+                with open(filename_with_path) as f:
+                    content = f.read()
+                label = str(testData(get_words(content), p_word_in_topic, p_T))
+                if label in confusion_matrix[topic]:
+                    confusion_matrix[topic][label] += 1
+                else:
+                    confusion_matrix[topic][label] = 1
+                count_doc += 1
+                if topic == label:
+                    accuracy += 1
+        print "Accuracy: ", (accuracy * 1.0 / count_doc) * 100
+        print_matrix(topics, confusion_matrix)
