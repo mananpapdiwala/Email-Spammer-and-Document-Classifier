@@ -19,6 +19,29 @@
 # The folder and file  starting with . are ignored
 
 # Along with the code file we are also uplodaing a model.txt and distinctive_words.txt we have created using fration 1.0 and the train data you provided
+
+# Fully Supervised Learning:
+# We are reading all the files and maintaining a dictionary called p_w_t
+# It's keys are all the different words found during training
+# The value of each word key is another dicitonary which contains distribution of that word in different classification
+# In short we are maintaining the count for each word in different classification
+# The probability is then calculated by dividing the total word count in a topic
+
+# The test part then uses this probability to find the probability of a test word for all topics
+# The topic that gives maximum probability is used to labelled the test word.
+
+# Semi Supervised Learning:
+# We multiple the fraction by 100
+# While reading each file we generate a random number between 1 and 100
+# If that number is greater than fraction multipled by 100 we label the document as unlabelled or else we use the supervised learning on that file
+# All the unknown files are then used as test files and the trained data based on partial files is used to label these unknown files and create the final trained model
+
+# The actual test files are then labelled using this trained model
+
+# Unsupervised Learning:
+# Each word is randomly assigned label
+# This process is run within a for loop for multiple times to get convergence
+# The trained model then obtained is used to label the test files.
 from json import load, dump
 from os import listdir
 from sys import exit, argv
