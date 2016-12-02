@@ -12,6 +12,13 @@
 # Accuracy for fraction = 0.9 : 83.4439723845
 # Accuracy for fraction = 1.0 : 83.8422729687
 #
+
+# Some assumptions:
+# There are two folders train and test in the same directory that contains this code file.
+# There are 20 folders each in both train and test folder having the folder name as the topic name.
+# The folder and file  starting with . are ignored
+
+# Along with the code file we are also uplodaing a model.txt and distinctive_words.txt we have created using fration 1.0 and the train data you provided
 from json import load, dump
 from os import listdir
 from sys import exit, argv
@@ -37,7 +44,7 @@ STOPWORDS = {'all', 'whys', 'being', 'over', 'isnt', 'through', 'yourselves', 'h
              'yours', 'their', 'so', 'the', 'having', 'once'}
 
 
-def calc_p_T(dc):  # Calculate p(Topic)
+def calc_p_T(dc):  # Calculate p(Topic) or probability of a topic
     dc.p_T = {}
     for topic in dc.docCountInTopic:
         dc.p_T[topic] = dc.docCountInTopic[topic] * 1.0 / dc.totalDocCount
@@ -78,7 +85,9 @@ def print_matrix(topics, confusion_matrix):  # Print the confusion matrix
 
 
 def testData(words, probabilityTable, p_T):
-    # Function tests a document on learned model and returns the proposed label
+    # Function tests a document uisng the learned model and returns the proposed label
+    # We a used a minimum value of 10 raise to -6 for the missing words in the learned model.
+    # For fraction 0.0 there will be no maximum and hence the else part will be used and we randomly select the topic.
     p = {}
     for topic in p_T:
         p[topic] = 0
@@ -145,8 +154,8 @@ def validate_initialize():  # Validate command line input and initialize variabl
     topics = get_dir_contents(dataset_directory)
     return bias, mode, dataset_directory, model_file, topics
 
-
 class DocumentClassification:
+	# Initialize all the dictionaries to be used in training model.
     def __init__(self):
         self.docCountInTopic = {}
         self.words_in_topic = {}
@@ -154,6 +163,7 @@ class DocumentClassification:
         self.totalDocCount = 0
         pass
 
+    # After each word is labelled this function is called to update all the count dictionaries.
     def processDocument(self, words, topic):
         if topic in self.docCountInTopic:
             self.docCountInTopic[topic] += 1
