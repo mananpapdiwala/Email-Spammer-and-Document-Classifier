@@ -34,6 +34,9 @@
 # being in Spam is much less than in not spam
 
 
+# Also, please see def replace_line(line): to understand what we have considered as a word. We have replaced punchuation
+# marks and few words then considered words. So hyperlinks will look different in top 10 words.
+
 # Results: DT
 """ """
 """
