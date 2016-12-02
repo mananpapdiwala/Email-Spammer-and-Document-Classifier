@@ -31,7 +31,7 @@
 # The topic that gives maximum probability is used to labelled the test word.
 
 # Semi Supervised Learning:
-# We multiple the fraction by 100
+# We multiply the fraction by 100
 # While reading each file we generate a random number between 1 and 100
 # If that number is greater than fraction multipled by 100 we label the document as unlabelled or else we use the supervised learning on that file
 # All the unknown files are then used as test files and the trained data based on partial files is used to label these unknown files and create the final trained model
