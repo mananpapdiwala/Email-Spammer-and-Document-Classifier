@@ -25,8 +25,16 @@
 # bayes net words best as a spam classifier
 # Results attached below
 
+# For printing the 10 words most associated with spam
+# We have calculated P(S=1|w)/P(S=0|w) and printed the top 10 words with highest values. As the probability of word
+# being in Spam is much more than in not spam
+#
+# For printing the 10 words least associated with spam
+# We have calculated P(S=0|w)/P(S=1|w) and printed the top 10 words with highest values. As the probability of word
+# being in Spam is much less than in not spam
+
+
 # Results: DT
-# Training
 """ """
 """
 DECISION TREE: word as binary feature
@@ -766,7 +774,7 @@ def print_confusion_matrix(confusion_matrix):
     a_s = reformat_size_4(str(accuracy_s) + "%")
     a_ns = reformat_size_4(str(accuracy_ns) + "%")
 
-    print '%-12s%-12s%-12s%-12s' % (" ","SPAM ", "NOT SPAM ", "ACCURACY ")
+    print '%-12s%-12s%-12s%-12s' % (" ", "SPAM ", "NOT SPAM ", "ACCURACY ")
     print '%-12s%-12s%-12s%-12s' % ("SPAM ", cm_00 + " ", cm_01 + " ", a_s + " ")
     print '%-12s%-12s%-12s%-12s' % ("NOT SPAM ", cm_10 + " ", cm_11 + " ", a_ns + " ")
     print "\nAverage Accuracy: " + str(avg) + "%"
