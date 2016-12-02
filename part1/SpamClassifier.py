@@ -1,7 +1,8 @@
-# Probability
 # Commenting
 # Decision Model
-
+# Didn't replace '@' and ':' knowingly, as the results were better. Considering them as part of word.
+# Considered words containing '$' and 'USD' amount as word 'dollardollar'.
+# Considered numbers as word 'numbernumber'.
 
 import pickle
 import sys
@@ -145,6 +146,9 @@ def replace_line(line):
     line = line.replace(". ", " ")
     line = line.replace(": ", " ")
     line = line.replace("#", " ")
+    if technique == "bayes":
+        line = line.replace(".", " ")
+
     return line
 
 
@@ -569,8 +573,7 @@ def train_dt():
     my_words = []
     for this_word in fd.words:
         if fd.words[this_word] > 10:
-            if this_word not in STOPWORDS:
-                my_words.append(this_word)
+            my_words.append(this_word)
     return main_generate_decision_tree(my_words, all_files, word_for_spam, 0)
 
 
@@ -624,22 +627,29 @@ def read_model_dt(file_path):
     return [dt_01, dt_f]
 
 
-def reformat_size_4(str):
-    while len(str) < 5:
-        str = " " + str
-    return str
+def reformat_size_4(my_str):
+    while len(my_str) < 5:
+        my_str = " " + my_str
+    return my_str
+
 
 def print_confusion_matrix(confusion_matrix):
     cm_00 = reformat_size_4(str(confusion_matrix[0]))
     cm_01 = reformat_size_4(str(confusion_matrix[1]))
     cm_10 = reformat_size_4(str(confusion_matrix[2]))
     cm_11 = reformat_size_4(str(confusion_matrix[3]))
-    print "\t\t\t---------------------"
-    print "\t\t\t| Spam\t| Not Spam \t|"
-    print "\t\t\t|-------|----------\t|"
-    print "Spam\t\t| " + cm_00 + "\t| " + cm_01 + "\t\t|"
-    print "Not Spam\t| " + cm_10 + "\t| " + cm_11 + "\t\t|"
-    print "\t\t\t---------------------"
+    accuracy_S = round(confusion_matrix[0] * 100.0/(confusion_matrix[0] + confusion_matrix[1]), 2)
+    accuracy_NS = round(confusion_matrix[3] * 100.0 / (confusion_matrix[2] + confusion_matrix[3]), 2)
+    avg = round((accuracy_NS + accuracy_S)/2, 2)
+    a_S = reformat_size_4(str(accuracy_S) + "%")
+    a_NS = reformat_size_4(str(accuracy_NS) + "%")
+    print "\t\t\t---------------------------------"
+    print "\t\t\t| Spam\t| Not Spam \t| Accuracy  |"
+    print "\t\t\t|-------|----------\t|-----------|"
+    print "Spam\t\t| " + cm_00 + "\t| " + cm_01 + "\t\t| " + a_S + "\t|"
+    print "Not Spam\t| " + cm_10 + "\t| " + cm_11 + "\t\t| " + a_NS + "\t|"
+    print "\t\t\t---------------------------------"
+    print "\nAverage Accuracy: " + str(avg) + "%"
 
 start_time = time.time()
 print time.asctime(time.localtime(time.time()))
