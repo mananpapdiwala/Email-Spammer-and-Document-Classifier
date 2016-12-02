@@ -27,7 +27,7 @@
 
 # Results: DT
 # Training
-
+""" """
 """
 DECISION TREE: word as binary feature
 
@@ -88,6 +88,11 @@ Average Accuracy: 96.32%
 """
 TRAINING:
 Top 10 words::
+    taking words as binary:
+		for P(S=1|w):['jm@netnoteinc', 'cpunks@localhost', 'spamdeath', 'mailings', 'jun', 'cypherpunks-forward@ds', 'kr', 'cypherpunks@ds', 'cpunks@hq', 'mortgage', 'hq', 'webmaster@efi', 'frontpage', 'zzzzason', 'cdo', 'yyyy@netnoteinc', 'zzzz@jmason', 'zzzz@spamassassin', 'spamassassin-sightings@lists', 'cn']
+
+		for P(S=0|w):['rpm', 'newsisfree', 'rpm-zzzlist@freshrpms', 'freshrpms', 'rpm-list-admin@freshrpms', ':rpm-list-request@freshrpms', 'hits', 'pine', 'redhat', 'lnx', 'yyyy@example', 'fork@example', 'jm-rpm@jmason', 'encoding', 'rssfeeds@jmason', 'rpm-zzzlist-admin@freshrpms', 'rpm-list@freshrpms', 'rssfeeds@example', 'egwn', ':rpm-zzzlist-request@freshrpms']
+
 
 	taking frequency in account:
 
@@ -96,10 +101,6 @@ Top 10 words::
 		for P(S=0|w):['yyyy@example', 'zdnet', 'encoding', 'fork@example', 'freshrpms', 'rpm-list@freshrpms', 'hits', 'cnet', 'lockergnome', 'rpm-zzzlist-admin@freshrpms', 'exmh', 'rssfeeds@example', 'rpm-zzzlist@freshrpms', 'iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii', 'rssfeeds@jmason', 'egwn', 'rpm', 'weblogs', 'redhat', 'listman']
 
 
-	taking words as binary:
-		for P(S=1|w):['jm@netnoteinc', 'cpunks@localhost', 'spamdeath', 'mailings', 'jun', 'cypherpunks-forward@ds', 'kr', 'cypherpunks@ds', 'cpunks@hq', 'mortgage', 'hq', 'webmaster@efi', 'frontpage', 'zzzzason', 'cdo', 'yyyy@netnoteinc', 'zzzz@jmason', 'zzzz@spamassassin', 'spamassassin-sightings@lists', 'cn']
-
-		P(S=0|w):['rpm', 'newsisfree', 'rpm-zzzlist@freshrpms', 'freshrpms', 'rpm-list-admin@freshrpms', ':rpm-list-request@freshrpms', 'hits', 'pine', 'redhat', 'lnx', 'yyyy@example', 'fork@example', 'jm-rpm@jmason', 'encoding', 'rssfeeds@jmason', 'rpm-zzzlist-admin@freshrpms', 'rpm-list@freshrpms', 'rssfeeds@example', 'egwn', ':rpm-zzzlist-request@freshrpms']
 
 TEST
 Confusion Matrix
@@ -116,6 +117,8 @@ Confusion Matrix
             SPAM        NOT SPAM    ACCURACY
 SPAM         1151          34       97.13%
 NOT SPAM       11        1358       99.2%
+
+Average Accuracy: 98.16%
 """
 
 import pickle
@@ -432,19 +435,19 @@ def train_bayes():
     print ""
     print "Top 10 words::"
 
-    g_words = find_most_probable_words(0, 1)
-    print "\n\ttaking frequency in account:"
-    print "\n\t\tfor P(S=1|w) :" + str(print_most_probable_words(g_words))
-
-    g_words = find_most_probable_words(1, 0)
-    print "\n\t\tfor P(S=0|w):" + str(print_most_probable_words(g_words))
-
-    print "\n\n\ttaking words as binary:"
+    print "\n\ttaking words as binary:"
     g_words = find_most_probable_words(2, 3)
     print "\t\tfor P(S=1|w):" + str(print_most_probable_words(g_words))
 
     g_words = find_most_probable_words(3, 2)
-    print "\n\t\tP(S=0|w):" + str(print_most_probable_words(g_words))
+    print "\n\t\tfor P(S=0|w):" + str(print_most_probable_words(g_words))
+
+    g_words = find_most_probable_words(0, 1)
+    print "\n\n\ttaking frequency in account:"
+    print "\n\t\tfor P(S=1|w) :" + str(print_most_probable_words(g_words))
+
+    g_words = find_most_probable_words(1, 0)
+    print "\n\t\tfor P(S=0|w):" + str(print_most_probable_words(g_words))
 
     print "\n\nCompleted"
 
