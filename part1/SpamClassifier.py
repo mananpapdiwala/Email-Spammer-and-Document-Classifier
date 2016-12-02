@@ -1,3 +1,9 @@
+# Commenting
+# Decision Model
+# Didn't replace '@' and ':' knowingly, as the results were better. Considering them as part of word.
+# Considered words containing '$' and 'USD' amount as word 'dollardollar'.
+# Considered numbers as word 'numbernumber'.
+
 import pickle
 import sys
 import time
@@ -5,58 +11,26 @@ import os
 import re
 import math
 
-
-STOPWORDS = {'all', 'pointing', 'whoever', 'four', 'go', 'mill', 'oldest', 'seemed', 'whose', 'certainly', 'young', 'p',
-             'presents', 'to', 'asking', 'those', 'under', 'far', 'every', 'yourselves', 'presented', 'did', 'turns',
-             'large', 'small', 'havent', 'thereupon', 'parted', 'smaller', 'says', 'ten', 'yourself', 'whens', 'here',
-             'second', 'further', 'even', 'what', 'heres', 'wouldnt', 'anywhere', 'above', 'new', 'ever', 'thin', 'men',
-             'full', 'mustnt', 'youd', 'sincere', 'youngest', 'let', 'groups', 'others', 'alone', 'having', 'almost',
-             'along', 'fifteen', 'great', 'didnt', 'k', 'wherever', 'amount', 'arent', 'thats', 'via', 'besides', 'put',
-             'everybody', 'from', 'working', 'two', 'next', 'call', 'therefore', 'taken', 'themselves', 'use', 'evenly',
-             'thru', 'until', 'today', 'more', 'knows', 'clearly', 'becomes', 'hereby', 'herein', 'downing', 'hereupon',
-             'everywhere', 'known', 'cases', 'must', 'me', 'states', 'none', 'room', 'f', 'this', 'work', 'itself', 'l',
-             'nine', 'can', 'mr', 'making', 'my', 'numbers', 'give', 'high', 'weve', 'something', 'want', 'needs', 'eg',
-             'end', 'turn', 'rather', 'meanwhile', 'how', 'itse', 'shouldnt', 'y', 'may', 'after', 'them', 'whenever',
-             'such', 'man', 'a', 'third', 'q', 'so', 'keeps', 'order', 'six', 'furthering', 'indeed', 'over', 'move',
-             'years', 'ended', 'isnt', 'through', 'fify', 'hell', 'still', 'its', 'before', 'beside', 'group', 'thence',
-             'somewhere', 'interesting', 'better', 'differently', 'ours', 'might', 'then', 'non', 'good', 'somebody',
-             'greater', 'thereby', 'eleven', 'downs', 'they', 'not', 'now', 'nor', 'wont', 'gets', 'hereafter',
-             'always', 'whither', 'doesnt', 'each', 'found', 'went', 'side', 'everyone', 'doing',
-             'year', 'our', 'beyond', 'out', 'opened', 'since', 'forty', 're', 'got', 'myse', 'shows', 'turning',
-             'differ', 'quite', 'whereupon', 'members', 'ask', 'anyhow', 'wanted', 'g', 'could', 'needing', 'keep',
-             'thing', 'place', 'w', 'ltd', 'hence', 'onto', 'think', 'first', 'already', 'seeming', 'thereafter',
-             'number', 'one', 'done', 'another', 'thick', 'open', 'given', 'needed', 'ordering', 'twenty', 'top',
-             'system', 'least', 'name', 'anyone', 'their', 'too', 'hundred', 'gives', 'interests', 'shell', 'mostly',
-             'behind', 'nobody', 'took', 'part', 'hadnt', 'herself', 'than', 'kind', 'b', 'showed', 'older', 'likely',
-             'nevertheless', 'r', 'were', 'toward', 'and', 'sees', 'wasnt', 'turned', 'few', 'say', 'have', 'need',
-             'seem', 'saw', 'orders', 'latter', 'that', 'also', 'take', 'which', 'wanting', 'sure', 'shall', 'knew',
-             'wells', 'most', 'eight', 'amongst', 'nothing', 'why', 'parting', 'noone', 'later', 'm', 'amoungst', 'mrs',
-             'points', 'fact', 'show', 'anyway', 'ending', 'find', 'state', 'should', 'only', 'going', 'pointed', 'do',
-             'his', 'get', 'de', 'cannot', 'longest', 'werent', 'during', 'him', 'areas', 'h', 'cry', 'she', 'x',
-             'where', 'theirs', 'we', 'whys', 'see', 'computer', 'are', 'best', 'said', 'ways', 'away', 'please',
-             'enough', 'smallest', 'between', 'neither', 'youll', 'across', 'ends', 'never', 'opening', 'however',
-             'come', 'both', 'c', 'last', 'many', 'ill', 'whereafter', 'against', 'etc', 's', 'became', 'faces',
-             'whole', 'asked', 'con', 'among', 'co', 'afterwards', 'point', 'seems', 'whatever', 'furthered', 'hers',
-             'moreover', 'throughout', 'furthers', 'puts', 'three', 'been', 'whos', 'whom', 'much', 'dont', 'wherein',
-             'interest', 'empty', 'wants', 'fire', 'beforehand', 'else', 'worked', 'an', 'former', 'present', 'case',
-             'myself', 'theyve', 'these', 'bill', 'n', 'will', 'while', 'theres', 'ive', 'would', 'backing', 'is',
-             'thus', 'it', 'cant', 'someone', 'im', 'in', 'ie', 'id', 'if', 'different', 'inc', 'perhaps', 'things',
-             'make', 'same', 'any', 'member', 'parts', 'several', 'higher', 'used', 'upon', 'uses', 'thoughts', 'hows',
-             'off', 'whereby', 'largely', 'i', 'youre', 'well', 'anybody', 'finds', 'thought', 'without', 'greatest',
-             'very', 'the', 'otherwise', 'yours', 'latest', 'newest', 'just', 'less', 'being', 'when', 'detail',
-             'front', 'rooms', 'facts', 'yet', 'wed', 'had', 'except', 'sometimes', 'lets', 'interested', 'has',
-             'ought', 'gave', 'around', 'big', 'showing', 'possible', 'early', 'five', 'know', 'like', 'necessary', 'd',
-             'herse', 'theyre', 'either', 'fully', 'become', 'works', 'grouping', 'therein', 'twelve', 'shed', 'once',
-             'because', 'old', 'often', 'namely', 'some', 'back', 'towards', 'shes', 'mine', 'himse', 'thinks', 'for',
-             'bottom', 'though', 'per', 'everything', 'does', 't', 'be', 'who', 'seconds', 'nowhere', 'although',
-             'sixty', 'by', 'on', 'about', 'goods', 'asks', 'anything', 'of', 'o', 'whence', 'youve', 'or', 'own',
-             'whats', 'formerly', 'into', 'within', 'due', 'down', 'hes', 'beings', 'right', 'theyd', 'couldnt', 'your',
-             'her', 'area', 'downed', 'there', 'long', 'hed', 'way', 'was', 'opens', 'himself', 'elsewhere', 'becoming',
-             'but', 'somehow', 'newer', 'shant', 'highest', 'with', 'he', 'made', 'places', 'whether', 'j', 'up', 'us',
-             'below', 'un', 'problem', 'z', 'clear', 'v', 'ordered', 'certain', 'describe', 'am', 'general', 'as',
-             'sometime', 'at', 'face', 'fill', 'again', 'hasnt', 'theyll', 'no', 'whereas', 'generally', 'backs',
-             'ourselves', 'grouped', 'other', 'latterly', 'wheres', 'you', 'really', 'felt', 'problems', 'important',
-             'sides', 'began', 'younger', 'e', 'longer', 'came', 'backed', 'together', 'u', 'presenting', 'serious'}
+# Stopwords Reference: https://github.com/Alir3z4/stop-words/blob/0e438af98a88812ccc245cf31f93644709e70370/english.txt
+STOPWORDS = {'all': 1, 'whys': 1, 'being': 1, 'over': 1, 'isnt': 1, 'through': 1, 'yourselves': 1, 'hell': 1, 'its': 1,
+             'before': 1, 'wed': 1, 'with': 1, 'had': 1, 'should': 1, 'to': 1, 'lets': 1, 'under': 1, 'ours': 1,
+             'has': 1, 'ought': 1, 'do': 1, 'them': 1, 'his': 1, 'very': 1, 'cannot': 1, 'they': 1, 'werent': 1,
+             'not': 1, 'during': 1, 'yourself': 1, 'him': 1, 'nor': 1, 'wont': 1, 'did': 1, 'theyre': 1, 'this': 1,
+             'she': 1, 'each': 1, 'havent': 1, 'where': 1, 'shed': 1, 'because': 1, 'doing': 1, 'theirs': 1, 'some': 1,
+             'whens': 1, 'up': 1, 'are': 1, 'further': 1, 'ourselves': 1, 'out': 1, 'what': 1, 'for': 1, 'heres': 1,
+             'while': 1, 'does': 1, 'above': 1, 'between': 1, 'youll': 1, 'be': 1, 'we': 1, 'who': 1, 'were': 1,
+             'here': 1, 'hers': 1, 'by': 1, 'both': 1, 'about': 1, 'would': 1, 'wouldnt': 1, 'didnt': 1, 'ill': 1,
+             'against': 1, 'arent': 1, 'youve': 1, 'theres': 1, 'or': 1, 'thats': 1, 'weve': 1, 'own': 1, 'whats': 1,
+             'dont': 1, 'into': 1, 'youd': 1, 'whom': 1, 'down': 1, 'doesnt': 1, 'theyd': 1, 'couldnt': 1, 'your': 1,
+             'from': 1, 'her': 1, 'hes': 1, 'there': 1, 'only': 1, 'been': 1, 'whos': 1, 'hed': 1, 'few': 1, 'too': 1,
+             'themselves': 1, 'was': 1, 'until': 1, 'more': 1, 'himself': 1, 'on': 1, 'but': 1, 'you': 1, 'hadnt': 1,
+             'shant': 1, 'mustnt': 1, 'herself': 1, 'than': 1, 'those': 1, 'he': 1, 'me': 1, 'myself': 1, 'theyve': 1,
+             'these': 1, 'cant': 1, 'below': 1, 'of': 1, 'my': 1, 'could': 1, 'shes': 1, 'and': 1, 'ive': 1, 'then': 1,
+             'wasnt': 1, 'is': 1, 'am': 1, 'it': 1, 'an': 1, 'as': 1, 'itself': 1, 'im': 1, 'at': 1, 'have': 1, 'in': 1,
+             'any': 1, 'if': 1, 'again': 1, 'hasnt': 1, 'theyll': 1, 'no': 1, 'that': 1, 'when': 1, 'same': 1, 'id': 1,
+             'how': 1, 'other': 1, 'which': 1, 'shell': 1, 'shouldnt': 1, 'our': 1, 'after': 1, 'most': 1, 'such': 1,
+             'why': 1, 'wheres': 1, 'a': 1, 'hows': 1, 'off': 1, 'i': 1, 'youre': 1, 'well': 1, 'yours': 1, 'their': 1,
+             'so': 1, 'the': 1, 'having': 1, 'once': 1}
 
 
 class DecisionTreeNode:
@@ -106,40 +80,6 @@ class FilesData:
     # Actual word for the word
     word_list_with_actual_word = {}
 
-    def re_initialize(self):
-        self.spam_words_f = {}
-        self.n_spam_words_f = {}
-
-        # Variables to store number probability of a word appearing in spam/non spam files considering freq. of word
-        self.p_spam_words_f = {}
-        self.p_n_spam_words_f = {}
-
-        # Variable that store no. of files that has the particular word
-        self.no_of_files_with_this_word_in_spam = {}
-        self.no_of_files_with_this_word_in_n_spam = {}
-
-        # Variable that store probability of word appearing in a document
-        self.p_spam_words_01 = {}
-        self.p_n_spam_words_01 = {}
-
-        # Variables to store file count
-        self.spam_files_count = 0
-        self.n_spam_files_count = 0
-
-        # Variables to store word count
-        self.total_words_spam_files = 0
-        self.total_words_n_spam_files = 0
-
-        # Variables that store file as a word frequency list
-        self.spam_files = []
-        self.n_spam_files = []
-
-        # List of words
-        self.words = {}
-
-        # Actual word for the word
-        self.word_list_with_actual_word = {}
-
 
 class ProbabilityTable:
     # Probability Table  {word: [p being spam considering freq, p being not spam considering freq, p being spam
@@ -177,6 +117,41 @@ def get_file_data(x_all_emails_list, x_data_set):
     return {"spam": spam_files, "notspam": not_spam_files}
 
 
+def replace_line(line):
+    line = line.lower()
+    line = line.replace("return-path", " ")
+    line = line.replace("received", " ")
+    line = line.replace("date", " ")
+    line = line.replace("subject", " ")
+    line = line.replace("to", " ")
+    line = line.replace("from", " ")
+    line = line.replace("reply-to", " ")
+    line = line.replace("message-id", " ")
+    line = line.replace("mailto", " ")
+    line = line.replace("sender", " ")
+    line = line.replace("!--", " ")
+    line = line.replace("--", " ")
+    line = line.replace("=", " ")
+    line = line.replace("!", " ")
+    line = line.replace("[", " ")
+    line = line.replace("]", " ")
+    line = line.replace(", ", " ")
+    line = line.replace(",", "")
+    line = line.replace(";", " ")
+    line = line.replace("(", " ")
+    line = line.replace(")", " ")
+    line = line.replace("<", " ")
+    line = line.replace(">", " ")
+    line = line.replace("\"", " ")
+    line = line.replace(". ", " ")
+    line = line.replace(": ", " ")
+    line = line.replace("#", " ")
+    if technique == "bayes":
+        line = line.replace(".", " ")
+
+    return line
+
+
 # Regex for amount Reference: http://stackoverflow.com/questions/2150205/can-somebody-explain-a-money-regex-that-just-
 # checks-if-the-value-matches-some-pa
 # Regex for email http://stackoverflow.com/questions/8022530/python-check-for-valid-email-address
@@ -187,21 +162,28 @@ def read_file(file_name, current_data, file_type):
     file_data = open(file_name, 'r')
 
     for line in file_data:
+
+        line = line.lower()
+        line = replace_line(line)
         for word in line.split():
             actual_word = word
 
-            if not word.find("$"):
-                word = "dollar"
+            if word in STOPWORDS:
+                continue
+
+            if word.isdigit():
+                word = "numbernumber"
 
             if not word.isalpha() and word.find("@") == -1 and word.find(".com") == -1 and word.find(".net") == -1:
                 continue
+
+            if word.find("$") >= 0 or word.find("USD") >= 0:
+                word = "dollardollar"
 
             word = re.sub('[^a-zA-Z0-9]', '', word)
 
             if word == '':
                 continue
-
-            word = word.lower()
 
             total_no_of_words += 1
 
@@ -365,9 +347,9 @@ def test_bayes():
     confusion_matrix_f = [result1[0], result1[1], result2[0], result2[1]]
     confusion_matrix_01 = [result1[2], result1[3], result2[2], result2[3]]
 
-    print "\nConfusion Matrix (Model 1: Words as binary features):"
+    print "\nConfusion Matrix \n(Model 1: Words as binary features):"
     print_confusion_matrix(confusion_matrix_f)
-    print "Confusion Matrix (Model 2: Words as freq):"
+    print "Confusion Matrix \n(Model 2: Words as freq):"
     print_confusion_matrix(confusion_matrix_01)
     print "\nTesting completed"
 
@@ -591,8 +573,7 @@ def train_dt():
     my_words = []
     for this_word in fd.words:
         if fd.words[this_word] > 10:
-            if this_word not in STOPWORDS:
-                my_words.append(this_word)
+            my_words.append(this_word)
     return main_generate_decision_tree(my_words, all_files, word_for_spam, 0)
 
 
@@ -622,10 +603,10 @@ def test_dt():
     print "Finding results....."
     confusion_matrix_01 = test_dt_head(dt_01)
     confusion_matrix_f = test_dt_head(dt_f)
-    print "\nConfusion Matrix"
-    print "01:\n"
+    print "\nConfusion Matrix \n(Model 1: Words as binary features):"
     print_confusion_matrix(confusion_matrix_01)
-    print "f:\n"
+
+    print "\nConfusion Matrix \n(Model 2: Words as frequency):"
     print_confusion_matrix(confusion_matrix_f)
 
 
@@ -646,13 +627,29 @@ def read_model_dt(file_path):
     return [dt_01, dt_f]
 
 
+def reformat_size_4(my_str):
+    while len(my_str) < 5:
+        my_str = " " + my_str
+    return my_str
+
+
 def print_confusion_matrix(confusion_matrix):
-    print "\t\t\t---------------------"
-    print "\t\t\t| Spam\t| Not Spam \t|"
-    print "\t\t\t|-------|----------\t|"
-    print "Spam\t\t| " + str(confusion_matrix[0]) + "\t| " + str(confusion_matrix[1]) + "\t\t|"
-    print "Not Spam\t| " + str(confusion_matrix[2]) + "\t| " + str(confusion_matrix[3]) + "\t\t|"
-    print "\t\t\t---------------------"
+    cm_00 = reformat_size_4(str(confusion_matrix[0]))
+    cm_01 = reformat_size_4(str(confusion_matrix[1]))
+    cm_10 = reformat_size_4(str(confusion_matrix[2]))
+    cm_11 = reformat_size_4(str(confusion_matrix[3]))
+    accuracy_S = round(confusion_matrix[0] * 100.0/(confusion_matrix[0] + confusion_matrix[1]), 2)
+    accuracy_NS = round(confusion_matrix[3] * 100.0 / (confusion_matrix[2] + confusion_matrix[3]), 2)
+    avg = round((accuracy_NS + accuracy_S)/2, 2)
+    a_S = reformat_size_4(str(accuracy_S) + "%")
+    a_NS = reformat_size_4(str(accuracy_NS) + "%")
+    print "\t\t\t---------------------------------"
+    print "\t\t\t| Spam\t| Not Spam \t| Accuracy  |"
+    print "\t\t\t|-------|----------\t|-----------|"
+    print "Spam\t\t| " + cm_00 + "\t| " + cm_01 + "\t\t| " + a_S + "\t|"
+    print "Not Spam\t| " + cm_10 + "\t| " + cm_11 + "\t\t| " + a_NS + "\t|"
+    print "\t\t\t---------------------------------"
+    print "\nAverage Accuracy: " + str(avg) + "%"
 
 start_time = time.time()
 print time.asctime(time.localtime(time.time()))
@@ -666,7 +663,6 @@ fd = FilesData()
 pt = ProbabilityTable()
 word_for_spam = "SSSSpam"
 word_for_n_spam = "NotSSSSpam"
-
 
 if mode == "train" and technique == "bayes":
     train_bayes()
