@@ -257,6 +257,7 @@ if __name__ == "__main__":
             top_words_per_topic[topic] = sorted(
                 [[dc.p_w_t[word][t], word] for word in dc.p_w_t for t in dc.p_w_t[word] if t == topic],
                 key=lambda element: element[0], reverse=True)[:10]
+            top_words_per_topic[topic] = [ element[1] for element in top_words_per_topic[topic]]
         write_to_file("distinctive_words.txt", top_words_per_topic)
     else:  # test mode
         print "Testing...\nIt may take a few minutes."
