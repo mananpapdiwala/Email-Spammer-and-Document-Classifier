@@ -19,7 +19,7 @@
 # Considered words containing '$' and 'USD' amount as word 'dollardollar'.
 # Considered numbers as word 'numbernumber'.
 
-# Model 2 where word frequency is taken into account works marginally better in bayes net model.
+# Model 1 where word is taken as a binary feature works marginally better in bayes net model.
 # Model 1 where word is taken as a binary feature works marginally better in decision tree model.
 #
 # bayes net words best as a spam classifier
@@ -68,23 +68,17 @@ Node:jul
 TEST:
 Confusion Matrix
 (Model 1: Words as binary features):
-			---------------------------------
-			| Spam	| Not Spam 	| Accuracy  |
-			|-------|----------	|-----------|
-Spam		|  1180	|     5		| 99.58%	|
-Not Spam	|    83	|  1286		| 93.94%	|
-			---------------------------------
+            SPAM        NOT SPAM    ACCURACY
+SPAM         1180           5       99.58%
+NOT SPAM       83        1286       93.94%
 
 Average Accuracy: 96.76%
 
 Confusion Matrix
 (Model 2: Words as frequency):
-			---------------------------------
-			| Spam	| Not Spam 	| Accuracy  |
-			|-------|----------	|-----------|
-Spam		|  1161	|    24		| 97.97%	|
-Not Spam	|    73	|  1296		| 94.67%	|
-			---------------------------------
+            SPAM        NOT SPAM    ACCURACY
+SPAM         1161          24       97.97%
+NOT SPAM       73        1296       94.67%
 
 Average Accuracy: 96.32%
 
@@ -110,24 +104,18 @@ Top 10 words::
 TEST
 Confusion Matrix
 (Model 1: Words as binary features):
-			---------------------------------
-			| Spam	| Not Spam 	| Accuracy  |
-			|-------|----------	|-----------|
-Spam		|  1151	|    34		| 97.13%	|
-Not Spam	|    11	|  1358		| 99.2%	|
-			---------------------------------
-
-Average Accuracy: 98.16%
-Confusion Matrix
-(Model 2: Words as freq):
-			---------------------------------
-			| Spam	| Not Spam 	| Accuracy  |
-			|-------|----------	|-----------|
-Spam		|  1175	|    10		| 99.16%	|
-Not Spam	|    22	|  1347		| 98.39%	|
-			---------------------------------
+            SPAM        NOT SPAM    ACCURACY
+SPAM         1175          10       99.16%
+NOT SPAM       22        1347       98.39%
 
 Average Accuracy: 98.78%
+
+
+Confusion Matrix
+(Model 2: Words frequency taken into account):
+            SPAM        NOT SPAM    ACCURACY
+SPAM         1151          34       97.13%
+NOT SPAM       11        1358       99.2%
 """
 
 import pickle
@@ -478,9 +466,10 @@ def test_bayes():
     confusion_matrix_01 = [result1[2], result1[3], result2[2], result2[3]]
 
     print "\nConfusion Matrix \n(Model 1: Words as binary features):"
-    print_confusion_matrix(confusion_matrix_f)
-    print "Confusion Matrix \n(Model 2: Words as freq):"
     print_confusion_matrix(confusion_matrix_01)
+
+    print "\n\nConfusion Matrix \n(Model 2: Words frequency taken into account):"
+    print_confusion_matrix(confusion_matrix_f)
     print "\nTesting completed"
 
 
@@ -773,12 +762,10 @@ def print_confusion_matrix(confusion_matrix):
     avg = round((accuracy_ns + accuracy_s)/2, 2)
     a_s = reformat_size_4(str(accuracy_s) + "%")
     a_ns = reformat_size_4(str(accuracy_ns) + "%")
-    print "\t\t\t---------------------------------"
-    print "\t\t\t| Spam\t| Not Spam \t| Accuracy  |"
-    print "\t\t\t|-------|----------\t|-----------|"
-    print "Spam\t\t| " + cm_00 + "\t| " + cm_01 + "\t\t| " + a_s + "\t|"
-    print "Not Spam\t| " + cm_10 + "\t| " + cm_11 + "\t\t| " + a_ns + "\t|"
-    print "\t\t\t---------------------------------"
+
+    print '%-12s%-12s%-12s%-12s' % (" ","SPAM ", "NOT SPAM ", "ACCURACY ")
+    print '%-12s%-12s%-12s%-12s' % ("SPAM ", cm_00 + " ", cm_01 + " ", a_s + " ")
+    print '%-12s%-12s%-12s%-12s' % ("NOT SPAM ", cm_10 + " ", cm_11 + " ", a_ns + " ")
     print "\nAverage Accuracy: " + str(avg) + "%"
 
 
@@ -835,9 +822,9 @@ if mode == "train" and technique == "dt":
     write_model_dt(model_file, dts)
     print "Model saved to file"
     print "Training completed"
-    print "\nDECISION TREE: word as binary feature"
+    print "\nDECISION TREE: Model 1: word as binary feature"
     print_decision_model(dts[0], 0)
-    print "\nDECISION TREE: word as frequency"
+    print "\nDECISION TREE: Model 2: word frequency taken into account"
     print_decision_model(dts[1], 0)
 
 if mode == "test" and technique == "dt":
